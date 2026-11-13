@@ -1,0 +1,76 @@
+{
+  "table": "diseases",
+  "pk": "disease_id",
+  "items": [
+    {
+      "patient_id": 1,
+      "disease_name": "Hypertension",
+      "diagnosis_date": "2026-10-01",
+      "severity": "Moderate",
+      "symptoms": "High BP, headaches",
+      "description": "Stage 1 hypertension",
+      "treatment": "Lifestyle changes + medication",
+      "prescribed_meds": "Amlodipine 5mg",
+      "status": "Under Treatment",
+      "diagnosed_by": 2,
+      "follow_up_date": "2026-11-15",
+      "disease_id": 1
+    },
+    {
+      "patient_id": 2,
+      "disease_name": "Migraine",
+      "diagnosis_date": "2026-09-20",
+      "severity": "Mild",
+      "symptoms": "Recurrent headaches",
+      "description": "Chronic migraine",
+      "treatment": "Pain management",
+      "prescribed_meds": "Sumatriptan",
+      "status": "Active",
+      "diagnosed_by": 2,
+      "follow_up_date": "2026-11-10",
+      "disease_id": 2
+    },
+    {
+      "patient_id": 3,
+      "disease_name": "Fracture - Tibia",
+      "diagnosis_date": "2026-10-15",
+      "severity": "Severe",
+      "symptoms": "Leg pain, swelling",
+      "description": "Tibial shaft fracture",
+      "treatment": "Plaster + physiotherapy",
+      "prescribed_meds": "Calcium + D3",
+      "status": "Under Treatment",
+      "diagnosed_by": 3,
+      "follow_up_date": "2026-12-01",
+      "disease_id": 3
+    },
+    {
+      "patient_id": 4,
+      "disease_name": "Asthma",
+      "diagnosis_date": "2026-08-05",
+      "severity": "Moderate",
+      "symptoms": "Wheezing, shortness of breath",
+      "description": "Persistent asthma",
+      "treatment": "Inhaler + avoid triggers",
+      "prescribed_meds": "Salbutamol inhaler",
+      "status": "Active",
+      "diagnosed_by": 4,
+      "follow_up_date": "2026-11-20",
+      "disease_id": 4
+    },
+    {
+      "patient_id": 5,
+      "disease_name": "Type 2 Diabetes",
+      "diagnosis_date": "2026-07-10",
+      "severity": "Moderate",
+      "symptoms": "Increased thirst, fatigue",
+      "description": "Type 2 diabetes mellitus",
+      "treatment": "Diet control + metformin",
+      "prescribed_meds": "Metformin 500mg",
+      "status": "Chronic",
+      "diagnosed_by": 1,
+      "follow_up_date": "2026-11-30",
+      "disease_id": 5
+    }
+  ]
+}

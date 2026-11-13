@@ -1,0 +1,138 @@
+{
+  "table": "lab_tests",
+  "pk": "test_id",
+  "items": [
+    {
+      "test_name": "Complete Blood Count (CBC)",
+      "category": "Hematology",
+      "sample_type": "Blood",
+      "unit": "g/dL",
+      "normal_range": "Hb 12.0 - 15.5",
+      "price": 300.0,
+      "turnaround_hours": 6,
+      "test_id": 1,
+      "is_active": 1
+    },
+    {
+      "test_name": "Fasting Blood Sugar",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "mg/dL",
+      "normal_range": "70 - 110",
+      "price": 150.0,
+      "turnaround_hours": 4,
+      "test_id": 2,
+      "is_active": 1
+    },
+    {
+      "test_name": "HbA1c (Glycated Hb)",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "%",
+      "normal_range": "Below 5.7",
+      "price": 450.0,
+      "turnaround_hours": 24,
+      "test_id": 3,
+      "is_active": 1
+    },
+    {
+      "test_name": "Lipid Profile",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "mg/dL",
+      "normal_range": "Total Chol. below 200",
+      "price": 800.0,
+      "turnaround_hours": 24,
+      "test_id": 4,
+      "is_active": 1
+    },
+    {
+      "test_name": "Liver Function Test (LFT)",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "IU/L",
+      "normal_range": "SGOT 5 - 40",
+      "price": 700.0,
+      "turnaround_hours": 24,
+      "test_id": 5,
+      "is_active": 1
+    },
+    {
+      "test_name": "Kidney Function Test (KFT)",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "mg/dL",
+      "normal_range": "Creatinine 0.6 - 1.3",
+      "price": 750.0,
+      "turnaround_hours": 24,
+      "test_id": 6,
+      "is_active": 1
+    },
+    {
+      "test_name": "Thyroid Profile (T3 T4 TSH)",
+      "category": "Hormones",
+      "sample_type": "Blood",
+      "unit": "mIU/L",
+      "normal_range": "TSH 0.4 - 4.2",
+      "price": 900.0,
+      "turnaround_hours": 48,
+      "test_id": 7,
+      "is_active": 1
+    },
+    {
+      "test_name": "Vitamin D Total",
+      "category": "Biochemistry",
+      "sample_type": "Blood",
+      "unit": "ng/mL",
+      "normal_range": "30 - 100",
+      "price": 1600.0,
+      "turnaround_hours": 48,
+      "test_id": 8,
+      "is_active": 1
+    },
+    {
+      "test_name": "Urine Routine Examination",
+      "category": "Pathology",
+      "sample_type": "Urine",
+      "unit": "",
+      "normal_range": "No abnormality",
+      "price": 250.0,
+      "turnaround_hours": 6,
+      "test_id": 9,
+      "is_active": 1
+    },
+    {
+      "test_name": "Dengue NS1 Antigen",
+      "category": "Serology",
+      "sample_type": "Blood",
+      "unit": "",
+      "normal_range": "Negative",
+      "price": 600.0,
+      "turnaround_hours": 12,
+      "test_id": 10,
+      "is_active": 1
+    },
+    {
+      "test_name": "CRP (C-Reactive Protein)",
+      "category": "Serology",
+      "sample_type": "Blood",
+      "unit": "mg/L",
+      "normal_range": "Below 6",
+      "price": 500.0,
+      "turnaround_hours": 12,
+      "test_id": 11,
+      "is_active": 1
+    },
+    {
+      "test_name": "Chest X-Ray (PA View)",
+      "category": "Radiology",
+      "sample_type": "X-Ray",
+      "unit": "",
+      "normal_range": "Normal study",
+      "price": 550.0,
+      "turnaround_hours": 6,
+      "test_id": 12,
+      "is_active": 1
+    }
+  ]
+}

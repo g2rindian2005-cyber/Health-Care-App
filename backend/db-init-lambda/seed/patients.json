@@ -1,0 +1,71 @@
+{
+  "table": "patients",
+  "pk": "patient_id",
+  "items": [
+    {
+      "first_name": "Rahul",
+      "last_name": "Sharma",
+      "date_of_birth": "1990-05-14",
+      "gender": "Male",
+      "phone": "9876543210",
+      "email": "rahul.sharma@email.com",
+      "address": "12 MG Road, Bangalore",
+      "blood_group": "O+",
+      "emergency_contact": "9123456780",
+      "insurance_number": "INS-001",
+      "patient_id": 1
+    },
+    {
+      "first_name": "Priya",
+      "last_name": "Patel",
+      "date_of_birth": "1988-09-22",
+      "gender": "Female",
+      "phone": "9876543211",
+      "email": "priya.patel@email.com",
+      "address": "45 Park Street, Mumbai",
+      "blood_group": "A+",
+      "emergency_contact": "9123456781",
+      "insurance_number": "INS-002",
+      "patient_id": 2
+    },
+    {
+      "first_name": "Amit",
+      "last_name": "Verma",
+      "date_of_birth": "1995-01-30",
+      "gender": "Male",
+      "phone": "9876543212",
+      "email": "amit.verma@email.com",
+      "address": "78 Lake View, Delhi",
+      "blood_group": "B+",
+      "emergency_contact": "9123456782",
+      "insurance_number": "INS-003",
+      "patient_id": 3
+    },
+    {
+      "first_name": "Sneha",
+      "last_name": "Reddy",
+      "date_of_birth": "2000-07-08",
+      "gender": "Female",
+      "phone": "9876543213",
+      "email": "sneha.reddy@email.com",
+      "address": "23 Brigade Rd, Hyderabad",
+      "blood_group": "AB+",
+      "emergency_contact": "9123456783",
+      "insurance_number": "INS-004",
+      "patient_id": 4
+    },
+    {
+      "first_name": "Karan",
+      "last_name": "Singh",
+      "date_of_birth": "1982-11-19",
+      "gender": "Male",
+      "phone": "9876543214",
+      "email": "karan.singh@email.com",
+      "address": "56 Civil Lines, Jaipur",
+      "blood_group": "O-",
+      "emergency_contact": "9123456784",
+      "insurance_number": "INS-005",
+      "patient_id": 5
+    }
+  ]
+}

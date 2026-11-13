@@ -1,0 +1,88 @@
+{
+  "table": "prescriptions",
+  "pk": "prescription_id",
+  "items": [
+    {
+      "patient_id": 1,
+      "doctor_id": 1,
+      "medicine_id": 3,
+      "quantity": 30,
+      "dosage": "5mg",
+      "frequency": "Once a day",
+      "duration_days": 30,
+      "prescribed_date": "2026-10-01 11:30:00",
+      "status": "Dispensed",
+      "dispensed_date": "2026-10-01 12:00:00",
+      "remarks": "For hypertension \u2014 monthly refill.",
+      "prescription_id": 1
+    },
+    {
+      "patient_id": 2,
+      "doctor_id": 2,
+      "medicine_id": 1,
+      "quantity": 10,
+      "dosage": "500mg",
+      "frequency": "Thrice a day",
+      "duration_days": 3,
+      "prescribed_date": "2026-09-20 15:30:00",
+      "status": "Dispensed",
+      "dispensed_date": "2026-09-20 16:05:00",
+      "remarks": "For migraine pain relief.",
+      "prescription_id": 2
+    },
+    {
+      "patient_id": 3,
+      "doctor_id": 3,
+      "medicine_id": 7,
+      "quantity": 20,
+      "dosage": "400mg",
+      "frequency": "Twice a day",
+      "duration_days": 10,
+      "prescribed_date": "2026-10-15 10:30:00",
+      "status": "Dispensed",
+      "dispensed_date": "2026-10-15 11:00:00",
+      "remarks": "Post-fracture pain management.",
+      "prescription_id": 3
+    },
+    {
+      "patient_id": 4,
+      "doctor_id": 4,
+      "medicine_id": 10,
+      "quantity": 1,
+      "dosage": "2 puffs",
+      "frequency": "As needed",
+      "duration_days": 30,
+      "prescribed_date": "2026-08-05 12:30:00",
+      "status": "Pending",
+      "remarks": "Asthma reliever inhaler.",
+      "prescription_id": 4
+    },
+    {
+      "patient_id": 5,
+      "doctor_id": 1,
+      "medicine_id": 4,
+      "quantity": 60,
+      "dosage": "500mg",
+      "frequency": "Twice a day",
+      "duration_days": 30,
+      "prescribed_date": "2026-07-10 17:45:00",
+      "status": "Dispensed",
+      "dispensed_date": "2026-07-10 18:10:00",
+      "remarks": "Diabetes \u2014 morning and evening after food.",
+      "prescription_id": 5
+    },
+    {
+      "patient_id": 5,
+      "doctor_id": 1,
+      "medicine_id": 11,
+      "quantity": 1,
+      "dosage": "100 units/ml",
+      "frequency": "Once at night",
+      "duration_days": 30,
+      "prescribed_date": "2026-11-05 10:00:00",
+      "status": "Pending",
+      "remarks": "Basal insulin \u2014 keep refrigerated.",
+      "prescription_id": 6
+    }
+  ]
+}

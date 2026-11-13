@@ -1,0 +1,72 @@
+{
+  "table": "lab_orders",
+  "pk": "order_id",
+  "items": [
+    {
+      "patient_id": 1,
+      "test_id": 4,
+      "ordered_by": 1,
+      "order_date": "2026-10-01 11:00:00",
+      "priority": "Routine",
+      "status": "Completed",
+      "result_value": "182",
+      "remarks": "Total cholesterol mildly raised; diet advice given.",
+      "report_date": "2026-10-02 09:15:00",
+      "order_id": 1
+    },
+    {
+      "patient_id": 2,
+      "test_id": 11,
+      "ordered_by": 2,
+      "order_date": "2026-09-20 15:00:00",
+      "priority": "Urgent",
+      "status": "Completed",
+      "result_value": "14",
+      "remarks": "CRP raised \u2014 consistent with migraine inflammation workup.",
+      "report_date": "2026-09-21 10:00:00",
+      "order_id": 2
+    },
+    {
+      "patient_id": 3,
+      "test_id": 1,
+      "ordered_by": 3,
+      "order_date": "2026-10-15 10:00:00",
+      "priority": "Routine",
+      "status": "Completed",
+      "result_value": "13.2",
+      "remarks": "Haemoglobin normal before fracture management.",
+      "report_date": "2026-10-15 16:30:00",
+      "order_id": 3
+    },
+    {
+      "patient_id": 4,
+      "test_id": 10,
+      "ordered_by": 4,
+      "order_date": "2026-08-05 12:00:00",
+      "priority": "Urgent",
+      "status": "Sample Collected",
+      "remarks": "Dengue screen ordered with asthma review.",
+      "order_id": 4
+    },
+    {
+      "patient_id": 5,
+      "test_id": 3,
+      "ordered_by": 1,
+      "order_date": "2026-07-10 17:15:00",
+      "priority": "Routine",
+      "status": "Processing",
+      "remarks": "Quarterly diabetes monitoring panel.",
+      "order_id": 5
+    },
+    {
+      "patient_id": 1,
+      "test_id": 5,
+      "ordered_by": 1,
+      "order_date": "2026-11-08 09:30:00",
+      "priority": "Routine",
+      "status": "Ordered",
+      "remarks": "Annual liver profile with hypertension review.",
+      "order_id": 6
+    }
+  ]
+}

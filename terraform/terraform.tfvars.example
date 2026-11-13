@@ -1,0 +1,18 @@
+# ============================================================
+# Copy to terraform.tfvars and fill in your values
+# terraform apply -var-file=terraform.tfvars
+# ============================================================
+
+aws_region   = "us-east-1"
+project_name = "hospital"
+environment  = "prod"
+
+
+# ---- EC2 ----
+ec2_instance_type = "t3.micro"
+ssh_key_name      = "hospital-key"   # create this key pair in AWS first
+
+# ---- SES SMTP (from SES > SMTP Settings > Create My SMTP Credentials) ----
+ses_smtp_username = "gr0735618@gmail.com"
+ses_smtp_password  = "lfig uqki cyov wgty"
+ses_from_email     = "gr0735618@gmail.com"   # verify this address in SES

@@ -1,0 +1,61 @@
+{
+  "table": "bills",
+  "pk": "bill_id",
+  "items": [
+    {
+      "patient_id": 1,
+      "bill_date": "2026-10-01 10:30:00",
+      "description": "Cardiology consultation + ECG",
+      "category": "Consultation",
+      "amount": 1500.0,
+      "discount": 0.0,
+      "status": "Partial",
+      "bill_id": 1,
+      "net_amount": 1500.0
+    },
+    {
+      "patient_id": 2,
+      "bill_date": "2026-09-20 14:00:00",
+      "description": "Neurology consultation + MRI scan",
+      "category": "Lab Test",
+      "amount": 5000.0,
+      "discount": 500.0,
+      "status": "Pending",
+      "bill_id": 2,
+      "net_amount": 4500.0
+    },
+    {
+      "patient_id": 3,
+      "bill_date": "2026-10-15 09:00:00",
+      "description": "Orthopedic consultation + X-Ray",
+      "category": "Consultation",
+      "amount": 2500.0,
+      "discount": 0.0,
+      "status": "Paid",
+      "bill_id": 3,
+      "net_amount": 2500.0
+    },
+    {
+      "patient_id": 4,
+      "bill_date": "2026-08-05 11:15:00",
+      "description": "Pulmonology consultation + Spirometry",
+      "category": "Consultation",
+      "amount": 1800.0,
+      "discount": 0.0,
+      "status": "Pending",
+      "bill_id": 4,
+      "net_amount": 1800.0
+    },
+    {
+      "patient_id": 5,
+      "bill_date": "2026-07-10 16:45:00",
+      "description": "General consult + Blood sugar panel",
+      "category": "Lab Test",
+      "amount": 1200.0,
+      "discount": 100.0,
+      "status": "Partial",
+      "bill_id": 5,
+      "net_amount": 1100.0
+    }
+  ]
+}

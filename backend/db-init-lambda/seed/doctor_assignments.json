@@ -1,0 +1,61 @@
+{
+  "table": "assignments",
+  "pk": "assignment_id",
+  "items": [
+    {
+      "patient_id": 1,
+      "doctor_id": 1,
+      "disease_id": 1,
+      "assignment_date": "2026-10-01 10:00:00",
+      "appointment_date": "2026-11-15 10:00:00",
+      "status": "Active",
+      "room_number": "C-101",
+      "notes": "Regular BP monitoring",
+      "assignment_id": 1
+    },
+    {
+      "patient_id": 2,
+      "doctor_id": 2,
+      "disease_id": 2,
+      "assignment_date": "2026-09-20 13:30:00",
+      "appointment_date": "2026-11-10 11:00:00",
+      "status": "Scheduled",
+      "room_number": "N-203",
+      "notes": "Migraine management",
+      "assignment_id": 2
+    },
+    {
+      "patient_id": 3,
+      "doctor_id": 3,
+      "disease_id": 3,
+      "assignment_date": "2026-10-15 08:30:00",
+      "appointment_date": "2026-12-01 09:00:00",
+      "status": "Active",
+      "room_number": "O-305",
+      "notes": "Post fracture review",
+      "assignment_id": 3
+    },
+    {
+      "patient_id": 4,
+      "doctor_id": 4,
+      "disease_id": 4,
+      "assignment_date": "2026-08-05 11:00:00",
+      "appointment_date": "2026-11-20 14:00:00",
+      "status": "Scheduled",
+      "room_number": "P-102",
+      "notes": "Asthma action plan",
+      "assignment_id": 4
+    },
+    {
+      "patient_id": 5,
+      "doctor_id": 1,
+      "disease_id": 5,
+      "assignment_date": "2026-07-10 16:30:00",
+      "appointment_date": "2026-11-30 15:00:00",
+      "status": "Active",
+      "room_number": "G-201",
+      "notes": "Diabetes management",
+      "assignment_id": 5
+    }
+  ]
+}

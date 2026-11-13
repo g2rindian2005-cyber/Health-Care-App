@@ -1,0 +1,66 @@
+{
+  "table": "doctors",
+  "pk": "doctor_id",
+  "items": [
+    {
+      "first_name": "Dr. Anil",
+      "last_name": "Gupta",
+      "specialization": "Cardiologist",
+      "department": "Cardiology",
+      "phone": "9000012345",
+      "email": "anil.gupta@hospital.com",
+      "license_number": "MED-101",
+      "availability": "Available",
+      "consultation_fee": 800.0,
+      "doctor_id": 1
+    },
+    {
+      "first_name": "Dr. Meera",
+      "last_name": "Nair",
+      "specialization": "Neurologist",
+      "department": "Neurology",
+      "phone": "9000012346",
+      "email": "meera.nair@hospital.com",
+      "license_number": "MED-102",
+      "availability": "Available",
+      "consultation_fee": 1000.0,
+      "doctor_id": 2
+    },
+    {
+      "first_name": "Dr. Vivek",
+      "last_name": "Joshi",
+      "specialization": "Orthopedic",
+      "department": "Orthopedics",
+      "phone": "9000012347",
+      "email": "vivek.joshi@hospital.com",
+      "license_number": "MED-103",
+      "availability": "Busy",
+      "consultation_fee": 600.0,
+      "doctor_id": 3
+    },
+    {
+      "first_name": "Dr. Sunita",
+      "last_name": "Kapoor",
+      "specialization": "Pediatrician",
+      "department": "Pediatrics",
+      "phone": "9000012348",
+      "email": "sunita.kapoor@hospital.com",
+      "license_number": "MED-104",
+      "availability": "Available",
+      "consultation_fee": 500.0,
+      "doctor_id": 4
+    },
+    {
+      "first_name": "Dr. Rajesh",
+      "last_name": "Mehta",
+      "specialization": "General Physician",
+      "department": "General",
+      "phone": "9000012349",
+      "email": "rajesh.mehta@hospital.com",
+      "license_number": "MED-105",
+      "availability": "On Leave",
+      "consultation_fee": 400.0,
+      "doctor_id": 5
+    }
+  ]
+}
