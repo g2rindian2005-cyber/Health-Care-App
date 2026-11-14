@@ -121,15 +121,15 @@ locals {
     PRESCRIPTIONS_TABLE = "hospital-prescriptions"
     COUNTERS_TABLE      = "hospital-id-counters"
     USERS_TABLE         = "hospital-users"
-    SMTP_HOST           = "email-smtp.${var.aws_region}.amazonaws.com"
-    SMTP_PORT           = "587"
+    SMTP_HOST           = var.smtp_host != "" ? var.smtp_host : "email-smtp.${var.aws_region}.amazonaws.com"
+    SMTP_PORT           = var.smtp_port
     AUTH_USERNAME       = var.auth_admin_username
     AUTH_EMAIL          = var.ses_from_email
     AUTH_PASSWORD       = var.auth_admin_password
     JWT_SECRET          = local.jwt_secret
-    SMTP_USERNAME       = var.ses_smtp_username
-    SMTP_PASSWORD       = var.ses_smtp_password
-    SMTP_FROM_EMAIL     = var.ses_from_email
+    SMTP_USERNAME       = var.smtp_username != "" ? var.smtp_username : var.ses_smtp_username
+    SMTP_PASSWORD       = var.smtp_password != "" ? var.smtp_password : var.ses_smtp_password
+    SMTP_FROM_EMAIL     = var.smtp_from_email != "" ? var.smtp_from_email : var.ses_from_email
   }
 }
 

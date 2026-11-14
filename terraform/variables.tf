@@ -66,6 +66,42 @@ variable "ses_from_email" {
   default     = "gr0735618@gmail.com"
 }
 
+# ---- Outgoing mail (SMTP) ----
+# By default the Lambdas send OTP mail through SES (the values above).
+# To send through Gmail SMTP instead — and keep it through every
+# apply — set these in terraform.tfvars. smtp_password is the Gmail
+# App Password, never the normal Gmail password.
+variable "smtp_host" {
+  description = "SMTP host for OTP mail. Empty = SES endpoint for this region."
+  type        = string
+  default     = ""
+}
+
+variable "smtp_port" {
+  description = "SMTP port for OTP mail"
+  type        = string
+  default     = "587"
+}
+
+variable "smtp_username" {
+  description = "SMTP username for OTP mail. Empty = SES SMTP username."
+  type        = string
+  default     = ""
+}
+
+variable "smtp_password" {
+  description = "SMTP password for OTP mail (Gmail App Password when using Gmail SMTP). Empty = SES SMTP password."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "smtp_from_email" {
+  description = "Sender address for OTP mail. Empty = SES sender email."
+  type        = string
+  default     = ""
+}
+
 # ---- Lambda ----
 variable "lambda_memory" {
   description = "Memory allocated to each Lambda (MB)"
