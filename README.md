@@ -192,7 +192,8 @@ sed -i "s|https://[a-z0-9]*\.execute-api\.[a-z0-9-]*\.amazonaws\.com/prod|$API|g
 
 ## STEP 6 — Upload Frontend to S3
 ```bash
-aws s3 sync frontend/ s3://hospital-management-frontend-bucket/ --delete
+aws s3 sync ../frontend/ s3://hospital-management-frontend-bucket/ --delete
+
 ```
 S3 website URL (from outputs):
 ```bash
