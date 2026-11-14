@@ -2152,6 +2152,16 @@ body.dash-blue .stat-purple .stat-icon-wrap { color: #d8b4fe; }
 .login-page .login-stat:nth-child(3) .login-stat-icon { color: #fcd34d; }
 .login-page .login-stat .num { font-size: 16px; font-weight: 700; }
 .login-page .login-stat .lbl { color: rgba(219, 234, 254, .65); font-size: 11.5px; }
+.login-page .login-stat-img {
+  min-width: 128px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .55);
+  transition: transform .25s;
+}
+.login-page .login-stat-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.login-page .login-stat-img:hover { transform: translateY(-3px); }
 .login-page .login-features span {
   border: 1px solid rgba(255, 255, 255, .16);
   backdrop-filter: blur(6px);
