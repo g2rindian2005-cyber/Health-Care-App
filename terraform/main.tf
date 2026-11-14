@@ -102,6 +102,11 @@ locals {
       pk   = "table_name"
       gsis = {}
     }
+    users = {
+      name = "hospital-users"
+      pk   = "email"
+      gsis = {}
+    }
   }
   common_env = {
     PATIENTS_TABLE      = "hospital-patients"
@@ -115,6 +120,7 @@ locals {
     MEDICINES_TABLE     = "hospital-medicines"
     PRESCRIPTIONS_TABLE = "hospital-prescriptions"
     COUNTERS_TABLE      = "hospital-id-counters"
+    USERS_TABLE         = "hospital-users"
     SMTP_HOST           = "email-smtp.${var.aws_region}.amazonaws.com"
     SMTP_PORT           = "587"
     AUTH_USERNAME       = var.auth_admin_username

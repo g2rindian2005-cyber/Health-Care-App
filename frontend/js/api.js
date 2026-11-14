@@ -152,6 +152,11 @@ const AuthAPI = {
   // POST /auth/verify-otp — step 2 of login: exchange the emailed code
   // (plus the challenge token from step 1) for the session JWT.
   verifyOtp: (challenge, otp) => request("/auth/verify-otp", { method: "POST", body: JSON.stringify({ challenge, otp }) }),
+  // POST /auth/register — create a new user account (name, email,
+  // password). The account signs in through the normal login + OTP
+  // flow afterwards; returns { message, user } or null on error
+  // (the error toast is already shown by request()).
+  register: (name, email, password) => request("/auth/register", { method: "POST", body: JSON.stringify({ name, email, password }) }),
 };
 
 /* ---------------- Toast helper ----------------

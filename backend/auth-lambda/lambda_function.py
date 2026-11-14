@@ -1,17 +1,29 @@
 """
-Lambda handler for AUTH (login with password + email OTP).
+Lambda handler for AUTH (register, login with password + email OTP).
 
 Routes (proxied via API Gateway):
+    POST /auth/register     { name, email, password }
+        -> creates a user account in the hospital-users table
+           (PBKDF2-hashed password, never stored in plain text) and
+           returns { message, user }. The new user then signs in
+           through the normal login + OTP flow below.
     POST /auth/login       { email|username, password }
-        -> verifies the password, emails a 6-digit OTP code and returns
+        -> verifies the password (built-in admin from env vars, or a
+           registered user from the hospital-users table), emails a
+           6-digit OTP code and returns
            { otp_required: true, challenge, email_hint, email_sent }
     POST /auth/verify-otp  { challenge, otp }
         -> verifies the code and returns { token, user } with the JWT.
 
-Single admin account, configured through environment variables:
-    AUTH_USERNAME  (default "admin")
-    AUTH_EMAIL     (the admin's email — login alias AND OTP recipient)
-    AUTH_PASSWORD  (required)
+Accounts:
+    * Built-in admin, configured through environment variables:
+        AUTH_USERNAME  (default "admin")
+        AUTH_EMAIL     (the admin's email — login alias AND OTP recipient)
+        AUTH_PASSWORD  (required)
+    * Registered users, stored in DynamoDB (USERS_TABLE, default
+      "hospital-users" — created by Terraform). If the table is not
+      configured, registration returns 503 and only the admin can
+      sign in.
     JWT_SECRET     (required, signs the tokens)
     SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM_EMAIL
                    (SES SMTP — used to email the OTP code)
@@ -36,11 +48,14 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 
+import boto3
+
 ENV = os.environ
 ADMIN_USER = ENV.get("AUTH_USERNAME", "admin")
 ADMIN_MAIL = ENV.get("AUTH_EMAIL", "")
 ADMIN_PASS = ENV.get("AUTH_" + "PASSWORD", "")
 JWT_SECRET = ENV.get("JWT_" + "SECRET", "")
+USERS_TABLE = ENV.get("USERS_TABLE", "")
 TOKEN_TTL_SECONDS = 8 * 60 * 60
 OTP_TTL_SECONDS = 5 * 60
 
@@ -62,16 +77,60 @@ def _sign(payload: dict) -> str:
     return signing_input + "." + _b64url(signature)
 
 
-def _issue_token(identifier: str) -> str:
+def _issue_token(identifier: str, name: str = "Administrator", sub: str = None) -> str:
     now = int(time.time())
     return _sign({
-        "sub": ADMIN_USER,
-        "name": "Administrator",
+        "sub": sub or ADMIN_USER,
+        "name": name,
         "email": identifier,
         "role": "admin",
         "iat": now,
         "exp": now + TOKEN_TTL_SECONDS,
     })
+
+
+# ── Registered users (DynamoDB hospital-users table) ──────────
+# Passwords are PBKDF2-HMAC-SHA256 hashes (stdlib only) — the plain
+# password is never stored. The table handle is built lazily so the
+# function still works when USERS_TABLE is not configured (admin-only).
+
+_users_table = None
+
+
+def _users():
+    global _users_table
+    if _users_table is None and USERS_TABLE:
+        try:
+            _users_table = boto3.resource("dynamodb").Table(USERS_TABLE)
+        except Exception:
+            _users_table = False
+    return _users_table or None
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
+    return f"pbkdf2_sha256$100000${salt}${dk.hex()}"
+
+
+def _check_password(password: str, stored: str) -> bool:
+    try:
+        _, iters, salt, hexhash = stored.split("$")
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(iters))
+        return hmac.compare_digest(dk.hex(), hexhash)
+    except Exception:
+        return False
+
+
+def _get_user(email: str):
+    """Return the user item for an email address, or None."""
+    table = _users()
+    if table is None or "@" not in email:
+        return None
+    try:
+        return table.get_item(Key={"email": email.lower()}).get("Item")
+    except Exception:
+        return None
 
 
 def _verify_token(token: str):
@@ -172,22 +231,31 @@ def lambda_handler(event, context):
         valid_ids = {ADMIN_USER.lower()}
         if ADMIN_MAIL:
             valid_ids.add(ADMIN_MAIL.lower())
-        user_ok = identifier.lower() in valid_ids
-        pass_ok = hmac.compare_digest(password, ADMIN_PASS)
-        if not (user_ok and pass_ok):
-            return _json(401, {"error": "Invalid credentials"})
+        # 1) built-in admin (unchanged behaviour)
+        is_admin = identifier.lower() in valid_ids and hmac.compare_digest(password, ADMIN_PASS)
+        display_name = "Administrator"
+        if not is_admin:
+            # 2) registered user from the hospital-users table
+            user = _get_user(identifier)
+            if not user or not _check_password(password, user.get("password_hash", "")):
+                return _json(401, {"error": "Invalid credentials"})
+            display_name = user.get("name") or "Administrator"
+            identifier = user["email"]  # canonical (lowercased) email
 
         otp = f"{secrets.randbelow(1000000):06d}"
         now = int(time.time())
         challenge = _sign({
             "purpose": "otp",
-            "sub": ADMIN_USER,
+            "sub": ADMIN_USER if is_admin else identifier,
             "email": identifier,
+            "name": display_name,
             "otp_hash": _otp_hash(identifier, otp),
             "iat": now,
             "exp": now + OTP_TTL_SECONDS,
         })
-        recipient = ADMIN_MAIL or (identifier if "@" in identifier else "")
+        # The code goes to whoever is signing in: the user's own email,
+        # or the admin's email when signing in with the admin username.
+        recipient = identifier if "@" in identifier else (ADMIN_MAIL or "")
         sent = _send_otp_email(recipient, otp)
         resp = {
             "otp_required": True,
@@ -202,6 +270,49 @@ def lambda_handler(event, context):
             resp["dev_otp"] = otp
         return _json(200, resp)
 
+    # ── Register a new account ──────────────────────────────────
+    # Creates a user in the hospital-users table. The account is
+    # usable immediately: the user then signs in through the normal
+    # login + OTP flow. No email is sent here (SES may be unverified);
+    # the OTP at login is the verification step.
+    if method == "POST" and path.endswith("/auth/register"):
+        data = _body(event)
+        name = str(data.get("name") or "").strip()
+        email = str(data.get("email") or "").strip().lower()
+        password = str(data.get("password") or "")
+        if not name or len(name) > 100:
+            return _json(400, {"error": "Please enter your full name"})
+        if "@" not in email or "." not in email.split("@")[-1] or len(email) > 150:
+            return _json(400, {"error": "Please enter a valid email address"})
+        if len(password) < 6:
+            return _json(400, {"error": "Password must be at least 6 characters"})
+        table = _users()
+        if table is None:
+            return _json(503, {"error": "Registration is not available yet — please try again later"})
+        try:
+            if table.get_item(Key={"email": email}).get("Item"):
+                return _json(409, {"error": "An account with this email already exists"})
+        except Exception:
+            return _json(503, {"error": "Registration is not available yet — please try again later"})
+        try:
+            table.put_item(
+                Item={
+                    "email": email,
+                    "name": name,
+                    "password_hash": _hash_password(password),
+                    "role": "admin",
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+                ConditionExpression="attribute_not_exists(email)",
+            )
+        except Exception as e:
+            # ConditionalCheckFailedException (race) or any other put
+            # failure — never leak the cause, just report the outcome.
+            if e.__class__.__name__ == "ConditionalCheckFailedException":
+                return _json(409, {"error": "An account with this email already exists"})
+            return _json(503, {"error": "Registration is not available yet — please try again later"})
+        return _json(201, {"message": "Account created", "user": {"name": name, "email": email}})
+
     # ── Step 2: verify the OTP, issue the session JWT ──────────
     if method == "POST" and path.endswith("/auth/verify-otp"):
         data = _body(event)
@@ -213,9 +324,10 @@ def lambda_handler(event, context):
         if not otp or not hmac.compare_digest(_otp_hash(payload.get("email", ""), otp), expected):
             return _json(401, {"error": "Invalid code"})
         identifier = payload.get("email", ADMIN_USER)
+        display_name = payload.get("name", "Administrator")
         return _json(200, {
-            "token": _issue_token(identifier),
-            "user": {"name": "Administrator", "email": identifier, "role": "admin"},
+            "token": _issue_token(identifier, name=display_name, sub=identifier if "@" in identifier else None),
+            "user": {"name": display_name, "email": identifier, "role": "admin"},
         })
 
     return _json(404, {"error": "Route not found", "path": path})
