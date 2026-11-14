@@ -14,5 +14,5 @@ ssh_key_name      = "hospital-key"   # create this key pair in AWS first
 
 # ---- SES SMTP (from SES > SMTP Settings > Create My SMTP Credentials) ----
 ses_smtp_username = "gr0735618@gmail.com"
-ses_smtp_password  = "lfig uqki cyov wgty"
+ses_smtp_password  = "iiyu lnej jkep oicb"
 ses_from_email     = "gr0735618@gmail.com"   # verify this address in SES
