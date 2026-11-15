@@ -98,14 +98,16 @@ locals {
       gsis = { "patient_id-index" = "patient_id" }
     }
     counters = {
-      name = "hospital-id-counters"
-      pk   = "table_name"
-      gsis = {}
+      name    = "hospital-id-counters"
+      pk      = "table_name"
+      pk_type = "S"
+      gsis    = {}
     }
     users = {
-      name = "hospital-users"
-      pk   = "email"
-      gsis = {}
+      name    = "hospital-users"
+      pk      = "email"
+      pk_type = "S"
+      gsis    = {}
     }
   }
   common_env = {
@@ -217,7 +219,9 @@ resource "aws_dynamodb_table" "hospital" {
 
   attribute {
     name = each.value.pk
-    type = each.key == "counters" ? "S" : "N"
+    # Numeric IDs everywhere except the String-keyed tables
+    # (counters, users) — declared per table via pk_type.
+    type = lookup(each.value, "pk_type", "N")
   }
 
   dynamic "attribute" {
