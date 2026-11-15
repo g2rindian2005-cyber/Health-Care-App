@@ -683,6 +683,63 @@ resource "aws_s3_bucket_policy" "frontend_public_read" {
 }
 
 # ============================================================
+# CloudFront — HTTPS front door for the S3 website.
+# The plain S3 website URL is HTTP on a shared amazonaws.com
+# host, which browsers flag ("Not secure" / Safe Browsing).
+# CloudFront serves the same site over HTTPS on its own
+# *.cloudfront.net domain with a free certificate.
+# Note: after syncing new frontend files, invalidate the
+# cache (`aws cloudfront create-invalidation`) or wait up
+# to an hour for the cached copy to expire.
+# ============================================================
+resource "aws_cloudfront_distribution" "frontend" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "HealtheCare frontend"
+  default_root_object = "index.html"
+  price_class         = "PriceClass_200"
+
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    origin_id   = "s3-website"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "s3-website"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    forwarded_values {
+      query_string = false
+      cookies { forward = "none" }
+    }
+
+    min_ttl     = 0
+    default_ttl = 3600
+    max_ttl     = 86400
+  }
+
+  restrictions {
+    geo_restriction { restriction_type = "none" }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = local.tags
+}
+
+# ============================================================
 # EC2 — Nginx serving the frontend (production front)
 # ============================================================
 

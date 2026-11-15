@@ -17,6 +17,16 @@ output "s3_website_url" {
   value       = "${aws_s3_bucket.frontend.id}.s3-website.${var.aws_region}.amazonaws.com"
 }
 
+output "cloudfront_url" {
+  description = "CloudFront HTTPS URL for the frontend — use this, not the S3 website URL"
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}
+
+output "cloudfront_domain" {
+  description = "CloudFront distribution domain name"
+  value       = aws_cloudfront_distribution.frontend.domain_name
+}
+
 
 
 output "lambda_function_names" {
