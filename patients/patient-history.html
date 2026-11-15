@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient History — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=7">
+  <style>
+    /* Patient report print styles — Download Report button */
+    #printHeader, #printExtra { display: none; }
+    @media print {
+      body { background: #fff !important; }
+      .page-header, #selectorCard, #emptyPrompt { display: none !important; }
+      .main-content { margin: 0 !important; padding: 0 !important; }
+      .page-content { padding: 0 !important; }
+      .card { background: #fff !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; break-inside: avoid; }
+      .profile-name, .card-header h3, td, th { color: #111827 !important; }
+      .text-muted, .profile-id { color: #475569 !important; }
+      #printHeader { display: block !important; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #0f2d5a; }
+      #printHeader h2 { font-size: 20px; color: #0f2d5a; margin: 0 0 4px; }
+      #printHeader p { font-size: 13px; color: #475569; margin: 0; }
+      #printExtra { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Patient History</h1>
+          <p>Complete medical, billing, and appointment history for each patient</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary btn-sm" id="downloadReportBtn" onclick="downloadReport()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Patient Selector -->
+      <div class="card mb-24" id="selectorCard">
+        <div class="card-body">
+          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+              <label class="form-label mb-4">Select Patient</label>
+              <select class="form-control" id="patientSelect">
+                <option value="">— Choose a patient —</option>
+              </select>
+            </div>
+            <div style="padding-top:20px;">
+              <button class="btn btn-primary" onclick="loadHistory()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                Load History
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Print-only report header -->
+      <div id="printHeader">
+        <h2>HealtheCare — Patient Medical Record</h2>
+        <p id="printHeaderMeta">—</p>
+      </div>
+
+      <!-- Patient Profile (hidden until loaded) -->
+      <div id="historyContent" style="display:none;">
+
+        <!-- Profile Header -->
+        <div class="card mb-24">
+          <div class="profile-header">
+            <div class="profile-avatar-lg" id="profileAvatar">?</div>
+            <div style="flex:1;">
+              <div class="profile-name" id="profileName">—</div>
+              <div class="profile-id" id="profileIdBadge">—</div>
+              <div class="profile-tags" id="profileTags"></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">Registered</div>
+              <div style="font-size:14px; font-weight:600;" id="profileRegDate">—</div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--gray-100);">
+            <div style="padding:16px 22px; border-right:1px solid var(--gray-100);">
+              <div style="font-size:11px; color:var(--gray-400); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Phone</div>
+              <div style="font-size:14px; font-weight:600;" id="profilePhone">—</div>
+            </div>
+            <div style="padding:16px 22px; border-right:1px solid var(--gray-100);">
+              <div style="font-size:11px; color:var(--gray-400); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Email</div>
+              <div style="font-size:14px; font-weight:600;" id="profileEmail">—</div>
+            </div>
+            <div style="padding:16px 22px; border-right:1px solid var(--gray-100);">
+              <div style="font-size:11px; color:var(--gray-400); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Blood Group</div>
+              <div style="font-size:14px; font-weight:600;" id="profileBlood">—</div>
+            </div>
+            <div style="padding:16px 22px;">
+              <div style="font-size:11px; color:var(--gray-400); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Gender</div>
+              <div style="font-size:14px; font-weight:600;" id="profileGender">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2 mb-24">
+          <!-- Disease History -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left"><h3>Disease History</h3></div>
+              <span class="badge badge-info" id="diseaseCount">0</span>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Disease</th><th>Severity</th><th>Status</th><th>Diagnosed</th></tr></thead>
+                <tbody id="diseaseTable"><tr><td colspan="4"><div class="spinner"></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Billing History -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left"><h3>Billing History</h3></div>
+              <span class="badge badge-info" id="billCount">0</span>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead><tr><th>Bill #</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody id="billTable"><tr><td colspan="4"><div class="spinner"></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appointments -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Appointments & Doctor Assignments</h3></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Doctor</th><th>Specialization</th><th>Disease</th><th>Room</th><th>Appointment Date</th><th>Status</th></tr></thead>
+              <tbody id="appointmentTable"><tr><td colspan="6"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Print-only: lab orders + prescriptions (fetched when downloading) -->
+        <div id="printExtra">
+          <div class="grid-2 mb-24">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-left"><h3>Lab Orders</h3></div>
+                <span class="badge badge-info" id="labCount">0</span>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead><tr><th>Test</th><th>Status</th><th>Ordered</th></tr></thead>
+                  <tbody id="labTable"><tr><td colspan="3"><div class="empty-state" style="padding:24px;"><p>No lab orders</p></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-left"><h3>Prescriptions</h3></div>
+                <span class="badge badge-info" id="rxCount">0</span>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead><tr><th>Medicine</th><th>Dosage</th><th>Status</th></tr></thead>
+                  <tbody id="rxTable"><tr><td colspan="3"><div class="empty-state" style="padding:24px;"><p>No prescriptions</p></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /historyContent -->
+
+      <!-- Empty prompt -->
+      <div id="emptyPrompt" class="card">
+        <div class="empty-state" style="padding:64px 24px;">
+          <div class="empty-state-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <h4>Select a patient to view history</h4>
+          <p>Choose a patient from the dropdown above to view their complete medical record.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'patient-history', title: 'Patient History', subtitle: 'Patients' });
+
+  let currentPatient = null; /* patient whose record is loaded — used by Download Report */
+
+  async function populateSelector() {
+    const data = await PatientsAPI.list();
+    const sel = document.getElementById('patientSelect');
+    (data?.patients||[]).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.patient_id;
+      opt.textContent = `PID-${String(p.patient_id).padStart(4,'0')} — ${p.first_name} ${p.last_name}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function loadHistory() {
+    const pid = document.getElementById('patientSelect').value;
+    if (!pid) { showToast('Please select a patient.', 'warning'); return; }
+
+    currentPatient = null;
+    document.getElementById('historyContent').style.display = 'none';
+    document.getElementById('emptyPrompt').style.display = 'none';
+
+    const [patient, diseases, bills, assignments] = await Promise.all([
+      PatientsAPI.get(pid),
+      DiseasesAPI.forPatient(pid),
+      BillingAPI.billsFor(pid),
+      DoctorsAPI.forPatient(pid),
+    ]);
+
+    const p = patient?.patient || patient;
+    if (!p) { showToast('Patient not found.', 'error'); document.getElementById('emptyPrompt').style.display='block'; return; }
+
+    currentPatient = p;
+    document.getElementById('printHeaderMeta').textContent =
+      `${p.first_name} ${p.last_name} · PID-${String(p.patient_id).padStart(4,'0')} · Generated on ${new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+
+    document.getElementById('profileAvatar').textContent = initials(`${p.first_name} ${p.last_name}`);
+    document.getElementById('profileName').textContent   = `${p.first_name} ${p.last_name}`;
+    document.getElementById('profileIdBadge').textContent = `PID-${String(p.patient_id).padStart(4,'0')}`;
+    document.getElementById('profileRegDate').textContent = formatDate(p.registration_date);
+    document.getElementById('profilePhone').textContent   = p.phone || '—';
+    document.getElementById('profileEmail').textContent   = p.email || '—';
+    document.getElementById('profileBlood').textContent   = p.blood_group || '—';
+    document.getElementById('profileGender').textContent  = p.gender || '—';
+    document.getElementById('profileTags').innerHTML = `
+      <span class="badge badge-gray">${p.gender || '—'}</span>
+      ${p.blood_group ? `<span class="badge badge-danger">${p.blood_group}</span>` : ''}`;
+
+    /* Disease table */
+    const dList = diseases?.diseases || diseases || [];
+    document.getElementById('diseaseCount').textContent = dList.length;
+    document.getElementById('diseaseTable').innerHTML = dList.length
+      ? dList.map(d => `<tr>
+          <td class="fw-600">${d.disease_name}</td>
+          <td>${statusBadge(d.severity)}</td>
+          <td>${statusBadge(d.status)}</td>
+          <td class="text-muted">${formatDate(d.diagnosis_date)}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4"><div class="empty-state" style="padding:24px;"><p>No disease records</p></div></td></tr>`;
+
+    /* Bills table */
+    const bList = bills?.bills || bills || [];
+    document.getElementById('billCount').textContent = bList.length;
+    document.getElementById('billTable').innerHTML = bList.length
+      ? bList.map(b => `<tr>
+          <td class="fw-600">#${b.bill_id}</td>
+          <td>${formatCurrency(b.net_amount)}</td>
+          <td>${statusBadge(b.status)}</td>
+          <td class="text-muted">${formatDate(b.bill_date)}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="4"><div class="empty-state" style="padding:24px;"><p>No billing records</p></div></td></tr>`;
+
+    /* Appointments */
+    const aList = assignments?.assignments || assignments || [];
+    document.getElementById('appointmentTable').innerHTML = aList.length
+      ? aList.map(a => `<tr>
+          <td class="fw-600">${a.doctor_name||'—'}</td>
+          <td class="text-muted">${a.specialization||'—'}</td>
+          <td>${a.disease_name||'—'}</td>
+          <td><span class="badge badge-gray">${a.room_number||'—'}</span></td>
+          <td class="text-muted">${(a.appointment_date||'').toString().slice(0,16)}</td>
+          <td>${statusBadge(a.status)}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="6"><div class="empty-state" style="padding:24px;"><p>No appointments</p></div></td></tr>`;
+
+    document.getElementById('historyContent').style.display = 'block';
+  }
+
+  /* Download Report — builds the full printable record (core sections on screen
+     + lab orders & prescriptions fetched on demand) then opens the print dialog.
+     In the dialog choose "Save as PDF" to download the report. */
+  async function downloadReport() {
+    if (!currentPatient) { showToast('Please select a patient and load history first.', 'warning'); return; }
+    const btn = document.getElementById('downloadReportBtn');
+    btn.disabled = true;
+    try {
+      const [labs, rxs] = await Promise.all([
+        LabAPI.ordersForPatient(currentPatient.patient_id).catch(() => null),
+        PharmacyAPI.prescriptionsForPatient(currentPatient.patient_id).catch(() => null),
+      ]);
+      const lList = labs?.orders || labs || [];
+      const rList = rxs?.prescriptions || rxs || [];
+      document.getElementById('labCount').textContent = lList.length;
+      document.getElementById('labTable').innerHTML = lList.length
+        ? lList.map(o => `<tr>
+            <td class="fw-600">${o.test_name || 'Test #' + o.test_id}</td>
+            <td>${statusBadge(o.status)}</td>
+            <td class="text-muted">${formatDate(o.order_date)}</td>
+          </tr>`).join('')
+        : `<tr><td colspan="3"><div class="empty-state" style="padding:24px;"><p>No lab orders</p></div></td></tr>`;
+      document.getElementById('rxCount').textContent = rList.length;
+      document.getElementById('rxTable').innerHTML = rList.length
+        ? rList.map(r => `<tr>
+            <td class="fw-600">${r.medicine_name || 'Medicine #' + r.medicine_id}</td>
+            <td class="text-muted">${r.dosage || '—'}</td>
+            <td>${statusBadge(r.status)}</td>
+          </tr>`).join('')
+        : `<tr><td colspan="3"><div class="empty-state" style="padding:24px;"><p>No prescriptions</p></div></td></tr>`;
+    } catch (e) { /* print the core record even if lab/pharmacy fail */ }
+    btn.disabled = false;
+    window.print();
+  }
+
+  populateSelector();
+</script>
+</body>
+</html>
