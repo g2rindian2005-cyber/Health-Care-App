@@ -160,10 +160,12 @@ def _otp_hash(identifier: str, otp: str) -> str:
 
 
 def _send_otp_email(to_addr: str, otp: str) -> bool:
-    host = ENV.get("SMTP_HOST", "")
-    user = ENV.get("SMTP_USERNAME", "")
-    password = ENV.get("SMTP_" + "PASSWORD", "")
-    sender = ENV.get("SMTP_FROM_EMAIL", "")
+    host = ENV.get("SMTP_HOST", "").strip()
+    user = ENV.get("SMTP_USERNAME", "").strip()
+    # Gmail displays App Passwords grouped with spaces ("abcd efgh ...").
+    # Pasting them as-is breaks SMTP login, so drop all whitespace.
+    password = "".join(ENV.get("SMTP_" + "PASSWORD", "").split())
+    sender = ENV.get("SMTP_FROM_EMAIL", "").strip()
     if not (host and user and password and sender and to_addr):
         return False
     msg = MIMEText(
@@ -179,7 +181,10 @@ def _send_otp_email(to_addr: str, otp: str) -> bool:
             s.login(user, password)
             s.sendmail(sender, [to_addr], msg.as_string())
         return True
-    except Exception:
+    except Exception as e:
+        # Never log the password or OTP; the smtplib error (e.g. 535 auth
+        # failed, DNS) is enough to diagnose the next failure.
+        print(f"OTP email failed: {type(e).__name__}: {e}")
         return False
 
 
