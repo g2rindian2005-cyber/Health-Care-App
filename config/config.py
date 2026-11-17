@@ -38,7 +38,7 @@ S3_WEBSITE_URL   = _env("S3_WEBSITE_URL", "")
 # ------------------------------------------------------------------
 # API Gateway
 # ------------------------------------------------------------------
-API_GATEWAY_URL  = _env("API_GATEWAY_URL", "https://abc123.execute-api.us-east-1.amazonaws.com/prod")
+API_GATEWAY_URL  = _env("API_GATEWAY_URL", "https://cbtlt9vvfi.execute-api.us-east-1.amazonaws.com/prod")
 
 # ------------------------------------------------------------------
 # SES SMTP (for email notifications)
