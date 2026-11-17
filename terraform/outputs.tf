@@ -44,8 +44,12 @@ output "configuration_reminder" {
      bills, 12 lab tests, 12 medicines, ...) into the DynamoDB
      tables. No SQL, no EC2, no manual step. Re-running it is safe.
 
-  2. Set API URL in frontend/js/api.js:
-     API_BASE_URL = "${aws_api_gateway_stage.prod.invoke_url}"
+  2. API URL is wired automatically:
+     Terraform writes js/config.js to S3 on every apply with the
+     live API URL (see aws_s3_object.frontend_config_js), so the
+     site connects without any manual step. If the API URL ever
+     changes, invalidate the CloudFront cache (/*) or wait up to
+     an hour for the cached copy to expire.
 
   3. Upload frontend to S3:
      aws s3 sync frontend/ s3://${aws_s3_bucket.frontend.id}/

@@ -682,6 +682,25 @@ resource "aws_s3_bucket_policy" "frontend_public_read" {
   depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
 
+# Frontend API config — written by Terraform on every apply, so the
+# site always points at THIS deployment's API Gateway. The frontend
+# reads js/config.js before api.js; without this file the pages fall
+# back to a hardcoded (dead) API URL and show "Unable to reach the
+# server". No manual upload is needed: apply rewrites this file
+# whenever the API URL changes (the etag tracks the content, so a
+# changed URL forces an update). Note: CloudFront may keep serving
+# a cached copy for up to an hour after a change — invalidate /*
+# once if the new URL must take effect immediately.
+resource "aws_s3_object" "frontend_config_js" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "js/config.js"
+  content      = "window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\" };\n"
+  content_type = "application/javascript"
+  etag         = md5("window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\" };\n")
+
+  depends_on = [aws_s3_bucket_policy.frontend_public_read]
+}
+
 # ============================================================
 # CloudFront — HTTPS front door for the S3 website.
 # The plain S3 website URL is HTTP on a shared amazonaws.com
