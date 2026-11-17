@@ -13,6 +13,8 @@ ec2_instance_type = "t3.micro"
 ssh_key_name      = "hospital-key"   # create this key pair in AWS first
 
 # ---- SES SMTP (from SES > SMTP Settings > Create My SMTP Credentials) ----
+smtp_host       = "smtp.gmail.com"
+smtp_port       = "587"
 ses_smtp_username = "gr0735618@gmail.com"
 ses_smtp_password  = "kegtdqfktjxvtmzl"
 ses_from_email     = "gr0735618@gmail.com"   # verify this address in SES
