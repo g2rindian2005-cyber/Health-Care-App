@@ -77,13 +77,13 @@ def _sign(payload: dict) -> str:
     return signing_input + "." + _b64url(signature)
 
 
-def _issue_token(identifier: str, name: str = "Administrator", sub: str = None) -> str:
+def _issue_token(identifier: str, name: str = "Administrator", sub: str = None, role: str = "admin") -> str:
     now = int(time.time())
     return _sign({
         "sub": sub or ADMIN_USER,
         "name": name,
         "email": identifier,
-        "role": "admin",
+        "role": role,
         "iat": now,
         "exp": now + TOKEN_TTL_SECONDS,
     })
@@ -305,7 +305,7 @@ def lambda_handler(event, context):
                     "email": email,
                     "name": name,
                     "password_hash": _hash_password(password),
-                    "role": "admin",
+                    "role": "patient",
                     "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 },
                 ConditionExpression="attribute_not_exists(email)",
@@ -316,7 +316,7 @@ def lambda_handler(event, context):
             if e.__class__.__name__ == "ConditionalCheckFailedException":
                 return _json(409, {"error": "An account with this email already exists"})
             return _json(503, {"error": "Registration is not available yet — please try again later"})
-        return _json(201, {"message": "Account created", "user": {"name": name, "email": email}})
+        return _json(201, {"message": "Account created", "user": {"name": name, "email": email, "role": "patient"}})
 
     # ── Step 2: verify the OTP, issue the session JWT ──────────
     if method == "POST" and path.endswith("/auth/verify-otp"):
@@ -330,9 +330,19 @@ def lambda_handler(event, context):
             return _json(401, {"error": "Invalid code"})
         identifier = payload.get("email", ADMIN_USER)
         display_name = payload.get("name", "Administrator")
+        # The JWT carries the role stored for this account: built-in
+        # admin and pre-panel accounts are "admin"; accounts created
+        # through /auth/register are "patient" (see register above).
+        # The login page redirects by this role (admin -> dashboard,
+        # patient -> patient panel).
+        role = "admin"
+        if "@" in identifier:
+            _u = _get_user(identifier)
+            if _u:
+                role = _u.get("role") or "patient"
         return _json(200, {
-            "token": _issue_token(identifier, name=display_name, sub=identifier if "@" in identifier else None),
-            "user": {"name": display_name, "email": identifier, "role": "admin"},
+            "token": _issue_token(identifier, name=display_name, sub=identifier if "@" in identifier else None, role=role),
+            "user": {"name": display_name, "email": identifier, "role": role},
         })
 
     return _json(404, {"error": "Route not found", "path": path})

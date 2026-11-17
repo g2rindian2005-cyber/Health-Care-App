@@ -22,6 +22,19 @@ function clearToken() {
   sessionStorage.removeItem("hms_token");
 }
 
+/** Read a claim out of the session JWT (client-side only, for
+    routing/display — the server re-verifies the signature). */
+function _tokenPayload() {
+  try {
+    const parts = getToken().split(".");
+    if (parts.length !== 3) return {};
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4)));
+  } catch (e) { return {}; }
+}
+function getMyEmail() { return _tokenPayload().email || ""; }
+function getMyRole() { return _tokenPayload().role || "admin"; }
+
 /** Central request wrapper with auth + error handling */
 async function request(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
@@ -60,6 +73,7 @@ async function request(path, options = {}) {
 const PatientsAPI = {
   list:   ()        => request("/patients"),
   get:    (id)      => request(`/patients/${id}`),
+  byEmail: (email)  => request(`/patients/by-email/${encodeURIComponent(email)}`),
   create: (body)    => request("/patients",        { method: "POST",   body: JSON.stringify(body) }),
   update: (id, b)   => request(`/patients/${id}`, { method: "PUT",    body: JSON.stringify(b) }),
   remove: (id)      => request(`/patients/${id}`, { method: "DELETE" }),

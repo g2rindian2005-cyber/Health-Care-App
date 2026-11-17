@@ -8,7 +8,7 @@
       project sites under /<repo>/), so detect the module folder by name. ── */
 function _prefix() {
   const parts = window.location.pathname.split('/').filter(Boolean);
-  const MODULE_DIRS = ['patients', 'billing', 'diseases', 'doctors', 'laboratory', 'pharmacy'];
+  const MODULE_DIRS = ['patients', 'billing', 'diseases', 'doctors', 'laboratory', 'pharmacy', 'patient'];
   return parts.some(p => MODULE_DIRS.includes(p)) ? '../' : '';
 }
 
@@ -297,6 +297,80 @@ function buildSidebarHTML() {
 </div>`;
 }
 
+/* ── Patient sidebar: only the patient panel pages ──────────
+   Shown when the signed-in account has role "patient". The admin
+   modules (Patients / Billing / Doctors / Lab / Pharmacy) are not
+   listed here at all. */
+function buildPatientSidebarHTML() {
+  const p = _prefix();
+  return `
+<div class="sidebar-header">
+  <div class="sidebar-logo-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  </div>
+  <span class="sidebar-brand-name">Healthe<span>Care</span></span>
+  <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+  </button>
+</div>
+
+<nav class="sidebar-nav">
+  <div class="nav-group">
+    <span class="nav-group-label">My Care</span>
+    <a href="${p}patient/my-appointments.html" class="nav-item" data-page="my-appointments">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>
+        </svg>
+      </span>
+      My Appointments
+    </a>
+    <a href="${p}patient/book-appointment.html" class="nav-item" data-page="book-appointment">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/><path d="M9 12h6"/><path d="M12 12v6"/>
+        </svg>
+      </span>
+      Book Appointment
+    </a>
+    <a href="${p}patient/my-profile.html" class="nav-item" data-page="my-profile">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </span>
+      My Profile
+    </a>
+  </div>
+</nav>
+
+<div class="sidebar-footer">
+  <div class="sidebar-user">
+    <div class="sidebar-user-avatar" id="sidebarUserAvatar">P</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarUserName">Patient</div>
+      <div class="sidebar-user-role">Patient</div>
+    </div>
+  </div>
+  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealtheCare · by Gokul Rathod</div>
+  <a href="${p}login.html" class="nav-item" id="logoutBtn" style="color:var(--red-600); margin-top:4px;">
+    <span class="nav-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+      </svg>
+    </span>
+    Logout
+  </a>
+</div>`;
+}
+
 /* ── Topbar HTML ──────────────────────────────────────────── */
 function buildTopbar(title, subtitle) {
   const p = _prefix();
@@ -356,6 +430,18 @@ function initApp(opts = {}) {
     return;
   }
 
+  /* Role guard: patients stay in the patient panel, admins in the admin app */
+  const _role = localStorage.getItem('hms_role') || sessionStorage.getItem('hms_role') || 'admin';
+  const _inPatientArea = window.location.pathname.includes('/patient/');
+  if (_role === 'patient' && !_inPatientArea) {
+    window.location.href = resolveRoot('patient/my-appointments.html');
+    return;
+  }
+  if (_role !== 'patient' && _inPatientArea) {
+    window.location.href = resolveRoot('dashboard.html');
+    return;
+  }
+
   /* Inject sidebar overlay */
   const overlay = document.createElement('div');
   overlay.className = 'sidebar-overlay';
@@ -369,7 +455,7 @@ function initApp(opts = {}) {
     sidebar.className = 'sidebar';
     document.body.prepend(sidebar);
   }
-  sidebar.innerHTML = buildSidebarHTML();
+  sidebar.innerHTML = _role === 'patient' ? buildPatientSidebarHTML() : buildSidebarHTML();
 
   /* Inject topbar */
   let topbar = document.querySelector('.topbar');
@@ -404,8 +490,10 @@ function initApp(opts = {}) {
   document.getElementById('logoutBtn')?.addEventListener('click', () => {
     localStorage.removeItem('hms_token');
     localStorage.removeItem('hms_user');
+    localStorage.removeItem('hms_role');
     sessionStorage.removeItem('hms_token');
     sessionStorage.removeItem('hms_user');
+    sessionStorage.removeItem('hms_role');
   });
 
   /* Mobile toggle */

@@ -12,8 +12,8 @@ Routes:
     GET    /assignments                      -> all assignments (synced with all tables)
     GET    /assignments/{id}                 -> one assignment
     GET    /assignments/doctor/{did}         -> assignments for a doctor
-    GET    /assignments/patient/{pid}        -> assignments for a patient
-    POST   /assignments                      -> assign doctor to patient (validates both)
+    GET    /assignments/patient/{pid}        -> assignments for a patient (patients: own record only)
+    POST   /assignments                      -> assign doctor to patient (validates both; patients: own PID only)
     PUT    /assignments/{id}                 -> update an assignment
     DELETE /assignments/{id}                 -> delete an assignment
 
@@ -21,7 +21,11 @@ DynamoDB migration: the old code read MySQL on RDS via db_connection.
 All reads/writes now go through dynamodb.py (boto3). Routes,
 validations, messages and response shapes are unchanged.
 """
+import base64
+import hashlib
+import hmac
 import json
+import time
 from botocore.exceptions import ClientError
 
 from dynamodb import (
@@ -32,6 +36,12 @@ from dynamodb import (
 
 import sys
 import os
+
+# JWT_SECRET comes from Terraform common_env — the same value the auth
+# Lambda signs session tokens with. When it is not configured on this
+# Lambda, the ownership check below is skipped, so deployments that
+# predate the patient panel keep working exactly as before.
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "email"))
 try:
     from send_email import send_appointment_email  # noqa: E402
@@ -59,6 +69,52 @@ def _json(status, payload):
         },
         "body": json.dumps(payload, default=str),
     }
+
+
+def _verify_token(token: str):
+    """Return the JWT payload dict if signature and expiry are valid."""
+    try:
+        head, body, sig = token.split(".")
+        expected = hmac.new(
+            JWT_SECRET.encode(), f"{head}.{body}".encode(), hashlib.sha256
+        ).digest()
+        given = base64.urlsafe_b64decode(sig + "=" * (-len(sig) % 4))
+        if not hmac.compare_digest(expected, given):
+            return None
+        payload = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+        if int(payload.get("exp", 0)) < int(time.time()):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def _assignment_auth(event, patient):
+    """Ownership check for assignment reads/writes.
+
+    Returns None when the caller may proceed, else an error response
+    (a _json dict) the route should return directly.
+    Admins may touch any patient; a patient may only touch the
+    patient record whose email matches their JWT email. Admin
+    behaviour is unchanged: a missing patient record is left to the
+    route's own handling, and calls without JWT_SECRET configured
+    skip the check entirely.
+    """
+    if not JWT_SECRET:
+        return None
+    headers = event.get("headers") or {}
+    auth = headers.get("Authorization") or headers.get("authorization") or ""
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    payload = _verify_token(token) if token else None
+    if not payload:
+        return _json(401, {"error": "Please sign in again"})
+    if (payload.get("role") or "admin") == "admin":
+        return None
+    if not patient:
+        return _json(404, {"error": "Patient not found"})
+    if str(patient.get("email") or "").strip().lower() != str(payload.get("email") or "").strip().lower():
+        return _json(403, {"error": "You can only book appointments for yourself"})
+    return None
 
 
 def _sort(rows, field, reverse=True):
@@ -220,6 +276,9 @@ def _dispatch(event, context):
 
     if method == "GET" and resource.endswith("/assignments/patient/{patient_id}"):
         pid = int(_pp(event, "patient_id"))
+        _auth_err = _assignment_auth(event, get_item(PATIENTS, pid))
+        if _auth_err:
+            return _auth_err
         rows = _sort(
             query_index(ASSIGNMENTS, "patient_id-index", "patient_id", pid),
             "appointment_date")
@@ -254,6 +313,9 @@ def _dispatch(event, context):
         p = get_item(PATIENTS, int(d["patient_id"]))
         if not p:
             return _json(404, {"error": "Patient not found"})
+        _auth_err = _assignment_auth(event, p)
+        if _auth_err:
+            return _auth_err
         doc = get_item(DOCTORS, int(d["doctor_id"]))
         if not doc:
             return _json(404, {"error": "Doctor not found"})
@@ -283,6 +345,10 @@ def _dispatch(event, context):
     if method == "PUT" and resource.endswith("/assignments/{assignment_id}"):
         aid = int(_pp(event, "assignment_id"))
         d = _body(event)
+        _row = get_item(ASSIGNMENTS, aid)
+        _auth_err = _assignment_auth(event, get_item(PATIENTS, _row.get("patient_id")) if _row else None)
+        if _auth_err:
+            return _auth_err
         fields = ["patient_id", "doctor_id", "disease_id", "appointment_date",
                   "status", "room_number", "notes"]
         changes = {f: d[f] for f in fields if f in d}
@@ -296,6 +362,10 @@ def _dispatch(event, context):
 
     if method == "DELETE" and resource.endswith("/assignments/{assignment_id}"):
         aid = int(_pp(event, "assignment_id"))
+        _row = get_item(ASSIGNMENTS, aid)
+        _auth_err = _assignment_auth(event, get_item(PATIENTS, _row.get("patient_id")) if _row else None)
+        if _auth_err:
+            return _auth_err
         delete_item(ASSIGNMENTS, aid)
         return _json(200, {"message": "Assignment deleted", "assignment_id": aid})
 

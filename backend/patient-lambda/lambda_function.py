@@ -4,6 +4,7 @@ Lambda handler for the PATIENT table (DynamoDB `hospital-patients`).
 Routes (proxied via API Gateway):
     GET    /patients            -> list all patients
     GET    /patients/{id}       -> get one patient (+ synchronised summary)
+    GET    /patients/by-email/{email} -> find a patient by email (patient panel)
     POST   /patients            -> add a patient   (also emails registration)
     PUT    /patients/{id}       -> update a patient
     DELETE /patients/{id}       -> delete a patient
@@ -90,6 +91,27 @@ def _dispatch(event, context):
     # CORS pre-flight
     if method == "OPTIONS":
         return _json(200, {"message": "OK"})
+
+    # ---- LOOKUP BY EMAIL (patient panel: find my patient record) ----
+    # No separate API Gateway route is needed: /patients/{proxy+}
+    # already delivers this path to this Lambda. Returns
+    # {"patient": {...}} or {"patient": null} when this email has no
+    # patient record yet (the panel then asks for the profile fields
+    # and creates it with POST /patients).
+    if method == "GET" and len(_seg) == 3 and _seg[0] == "patients" and _seg[1] == "by-email":
+        from urllib.parse import unquote
+        email = unquote(_seg[2]).strip().lower()
+        match = next(
+            (r for r in scan_all(PATIENTS)
+             if str(r.get("email") or "").strip().lower() == email),
+            None,
+        )
+        if not match:
+            return _json(200, {"patient": None})
+        cols = ["patient_id", "first_name", "last_name", "date_of_birth",
+                "gender", "phone", "email", "blood_group", "registration_date",
+                "address", "city", "pincode"]
+        return _json(200, {"patient": {k: match[k] for k in cols if k in match}})
 
     # ---- LIST ----
     if method == "GET" and resource.rstrip("/").endswith("/patients"):

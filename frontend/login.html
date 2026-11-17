@@ -180,22 +180,25 @@
     document.getElementById('step2').style.display = step === 2 ? 'block' : 'none';
     document.getElementById('loginTitle').textContent = step === 1 ? 'Welcome back' : 'Check your inbox';
     document.getElementById('loginSubtitle').textContent = step === 1
-      ? 'Sign in to your hospital administrator account'
+      ? 'Sign in to your HealtheCare account'
       : 'Enter the 6-digit code we emailed you';
     document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : 'Verify & Sign In';
   }
 
-  function finishLogin(token, name) {
+  function finishLogin(token, name, role) {
     const remember = document.getElementById('rememberMe').checked;
+    const store = remember ? localStorage : sessionStorage;
     setToken(token, remember);
-    (remember ? localStorage : sessionStorage).setItem('hms_user', name || savedU);
-    showToast('Welcome back, Administrator!', 'success', 'Logged In');
-    setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
+    store.setItem('hms_user', name || savedU);
+    store.setItem('hms_role', role || 'admin');
+    showToast(role === 'patient' ? 'Welcome back!' : 'Welcome back, Administrator!', 'success', 'Logged In');
+    // Patients land on their own panel; admins on the dashboard.
+    setTimeout(() => { window.location.href = role === 'patient' ? 'patient/my-appointments.html' : 'dashboard.html'; }, 700);
   }
 
   async function requestOtp(u, p) {
     const data = await AuthAPI.login(u, p);                // POST /auth/login
-    if (data && data.token) { finishLogin(data.token, data.user && data.user.name); return; }
+    if (data && data.token) { finishLogin(data.token, data.user && data.user.name, data.user && data.user.role); return; }
     if (!data || !data.otp_required) throw new Error('Login failed');
     challenge = data.challenge;
     step = 2;
@@ -224,7 +227,7 @@
       try {
         const data = await AuthAPI.verifyOtp(challenge, otp);   // POST /auth/verify-otp -> { token }
         if (!data || !data.token) throw new Error('Bad code');
-        finishLogin(data.token, data.user && data.user.name);
+        finishLogin(data.token, data.user && data.user.name, data.user && data.user.role);
       } catch (err) {
         setLoading(false);
         showToast('Invalid or expired code. Please try again.', 'error', 'Verification Failed');

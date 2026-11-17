@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Appointments — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>My Appointments</h1>
+          <p>Your upcoming and past appointments</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="book-appointment.html" class="btn btn-primary btn-sm">+ Book Appointment</a>
+        </div>
+      </div>
+
+      <!-- No profile yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Complete your profile first</h3>
+          <p style="font-size:13.5px; color:var(--gray-500); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then you can book appointments.</p>
+          <a href="my-profile.html" class="btn btn-primary">Complete My Profile</a>
+        </div>
+      </div>
+
+      <div id="appointmentsWrap" style="display:none;">
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-blue"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div><div class="stat-info"><div class="stat-value" id="totalAppts">—</div><div class="stat-label">Total Appointments</div></div></div>
+          <div class="stat-card stat-amber"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-info"><div class="stat-value" id="upcomingAppts">—</div><div class="stat-label">Upcoming</div></div></div>
+          <div class="stat-card stat-teal"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="stat-info"><div class="stat-value" id="scheduledAppts">—</div><div class="stat-label">Scheduled</div></div></div>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Appointments</h3><p>Only your bookings are shown here</p></div>
+            <div class="d-flex gap-8">
+              <select class="form-control" id="statusFilter" style="width:auto;padding:7px 12px;">
+                <option value="">All Statuses</option>
+                <option>Scheduled</option><option>Active</option><option>Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Doctor</th><th>Specialization</th>
+                  <th>Appointment</th><th>Room</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="apptTable"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="apptPagination"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'my-appointments', title: 'My Appointments', subtitle: 'My Care' });
+
+  let myPid = null, allAppts = [], apptPage = 1;
+  const perPage = 8;
+
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) return parseInt(cached, 10);
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  async function init() {
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('appointmentsWrap').style.display = 'block';
+    const data = await DoctorsAPI.forPatient(myPid);
+    allAppts = (data && data.assignments) || [];
+    allAppts.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+    document.getElementById('totalAppts').textContent = allAppts.length;
+    document.getElementById('upcomingAppts').textContent = allAppts.filter(a => a.status !== 'Completed' && new Date(a.appointment_date) >= new Date()).length;
+    document.getElementById('scheduledAppts').textContent = allAppts.filter(a => a.status === 'Scheduled').length;
+
+    renderAppts();
+  }
+
+  function getFiltered() {
+    const s = document.getElementById('statusFilter').value;
+    return allAppts.filter(a => !s || a.status === s);
+  }
+
+  function renderAppts() {
+    const f = getFiltered();
+    const page = f.slice((apptPage - 1) * perPage, apptPage * perPage);
+    document.getElementById('apptTable').innerHTML = page.length
+      ? page.map(a => `
+        <tr>
+          <td class="fw-600">#${a.assignment_id}</td>
+          <td class="fw-600">${a.doctor_name || '—'}</td>
+          <td class="text-muted">${a.specialization || '—'}</td>
+          <td class="text-muted">${(a.appointment_date || '').toString().slice(0, 16)}</td>
+          <td><span class="badge badge-gray">${a.room_number || '—'}</span></td>
+          <td>${statusBadge(a.status)}</td>
+          <td>
+            ${(a.status === 'Scheduled' || a.status === 'Active') ? `
+            <button class="btn-icon btn-icon-danger" onclick="cancelAppt(${a.assignment_id})" title="Cancel appointment">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>` : ''}
+          </td>
+        </tr>`).join('')
+      : `<tr><td colspan="7"><div class="empty-state"><h4>No appointments found</h4><p>Book your first appointment to see it here.</p></div></td></tr>`;
+    buildPagination(document.getElementById('apptPagination'), f.length, apptPage, perPage, p => { apptPage = p; renderAppts(); });
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', () => { apptPage = 1; renderAppts(); });
+
+  async function cancelAppt(id) {
+    const ok = await confirmDialog({ title: 'Cancel Appointment?', message: 'This will cancel your appointment with the doctor.', confirmText: 'Cancel Appointment' });
+    if (!ok) return;
+    const res = await DoctorsAPI.removeAssign(id);
+    if (res !== null) { showToast('Appointment cancelled.', 'success'); await init(); }
+  }
+
+  init();
+</script>
+</body>
+</html>

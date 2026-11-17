@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Appointment — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Book Appointment</h1>
+          <p>Choose a doctor and a time that works for you</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="my-appointments.html" class="btn btn-outline btn-sm">← My Appointments</a>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+
+        <!-- Form Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <h3>Appointment Details</h3>
+              <p>New bookings start as “Scheduled” — the hospital confirms them</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <form id="bookForm" novalidate>
+              <div class="form-section">
+                <div class="form-section-title">Doctor &amp; Time</div>
+                <div class="form-grid">
+                  <div class="form-group full">
+                    <label class="form-label">Doctor <span class="required">*</span></label>
+                    <select class="form-control" id="doctorSelect" required>
+                      <option value="">Loading doctors…</option>
+                    </select>
+                    <span class="form-error">Please choose a doctor.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date <span class="required">*</span></label>
+                    <input type="date" class="form-control" id="apptDate" required>
+                    <span class="form-error">Please choose a date.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Time <span class="required">*</span></label>
+                    <input type="time" class="form-control" id="apptTime" required>
+                    <span class="form-error">Please choose a time.</span>
+                  </div>
+                  <div class="form-group full">
+                    <label class="form-label">Reason / Notes</label>
+                    <textarea class="form-control" id="notes" rows="3" placeholder="e.g. Fever since 2 days, need a general checkup…"></textarea>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="card-footer">
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('bookForm').reset()">Reset</button>
+            <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitForm()">Book Appointment</button>
+          </div>
+        </div>
+
+        <!-- Side Info -->
+        <div style="display:flex; flex-direction:column; gap:18px;">
+          <div class="card">
+            <div class="card-header"><div class="card-header-left"><h3>How it works</h3></div></div>
+            <div class="card-body">
+              <ul style="font-size:12.5px; color:var(--gray-500); line-height:1.9; padding-left:16px; list-style:disc;">
+                <li>Pick a doctor, date and time</li>
+                <li>Your booking starts as <b>Scheduled</b></li>
+                <li>The hospital confirms it — then it shows as <b>Active</b></li>
+                <li>You can cancel it anytime from My Appointments</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-header-left"><h3>Your consultation fee</h3></div></div>
+            <div class="card-body" style="text-align:center; padding:24px;">
+              <div style="font-size:28px; font-weight:800; color:var(--blue-600);" id="feePreview">—</div>
+              <p style="font-size:12px; color:var(--gray-400); margin-top:6px;">Fee of the selected doctor</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'book-appointment', title: 'Book Appointment', subtitle: 'My Care' });
+
+  let myPid = null, doctors = [];
+
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) return parseInt(cached, 10);
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  async function init() {
+    const today = new Date();
+    document.getElementById('apptDate').min =
+      today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      showToast('Please complete your profile first.', 'warning');
+      setTimeout(() => { window.location.href = 'my-profile.html'; }, 900);
+      return;
+    }
+
+    const data = await DoctorsAPI.list();
+    doctors = ((data && data.doctors) || []).filter(d => d.availability === 'Available');
+    const sel = document.getElementById('doctorSelect');
+    sel.innerHTML = doctors.length
+      ? '<option value="">Select a doctor</option>' + doctors.map(d =>
+          `<option value="${d.doctor_id}">Dr. ${d.first_name} ${d.last_name} — ${d.specialization || 'General'} (${formatCurrency(d.consultation_fee)})</option>`).join('')
+      : '<option value="">No doctors available right now</option>';
+  }
+
+  document.getElementById('doctorSelect').addEventListener('change', (e) => {
+    const d = doctors.find(x => String(x.doctor_id) === e.target.value);
+    document.getElementById('feePreview').textContent = d ? formatCurrency(d.consultation_fee) : '—';
+  });
+
+  async function submitForm() {
+    const fields = ['doctorSelect', 'apptDate', 'apptTime'];
+    let valid = true;
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value) { el.classList.add('is-invalid'); valid = false; }
+      else el.classList.remove('is-invalid');
+    });
+    if (!valid) { showToast('Please fill in all required fields.', 'warning'); return; }
+    if (!myPid) { showToast('Please complete your profile first.', 'warning'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = 'Booking…'; btn.disabled = true;
+
+    const body = {
+      patient_id: myPid,
+      doctor_id: parseInt(document.getElementById('doctorSelect').value, 10),
+      appointment_date: document.getElementById('apptDate').value + ' ' + document.getElementById('apptTime').value,
+      status: 'Scheduled',
+      notes: document.getElementById('notes').value.trim(),
+    };
+
+    const res = await DoctorsAPI.assign(body);
+    btn.textContent = 'Book Appointment'; btn.disabled = false;
+
+    if (res) {
+      showToast('Appointment booked! It is Scheduled — the hospital will confirm it.', 'success', 'Booked');
+      setTimeout(() => { window.location.href = 'my-appointments.html'; }, 900);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

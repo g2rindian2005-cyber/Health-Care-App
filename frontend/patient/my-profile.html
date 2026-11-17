@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>My Profile</h1>
+          <p>Your patient record linked to this account</p>
+        </div>
+      </div>
+
+      <!-- Existing profile -->
+      <div id="profileWrap" style="display:none;">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left"><h3>Patient Details</h3><p>Linked to your login email</p></div>
+              <span class="badge badge-info" id="pidBadge">PID-????</span>
+            </div>
+            <div class="card-body">
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-control" id="viewName" disabled></div>
+                <div class="form-group"><label class="form-label">Email</label><input type="text" class="form-control" id="viewEmail" disabled></div>
+                <div class="form-group"><label class="form-label">Date of Birth</label><input type="text" class="form-control" id="viewDob" disabled></div>
+                <div class="form-group"><label class="form-label">Gender</label><input type="text" class="form-control" id="viewGender" disabled></div>
+                <div class="form-group"><label class="form-label">Blood Group</label><input type="text" class="form-control" id="viewBlood" disabled></div>
+                <div class="form-group"><label class="form-label">Registered On</label><input type="text" class="form-control" id="viewReg" disabled></div>
+              </div>
+              <div class="form-section mb-0">
+                <div class="form-section-title">Edit Contact Details</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Phone Number <span class="required">*</span></label>
+                    <input type="tel" class="form-control" id="editPhone" required>
+                    <span class="form-error">Valid phone number is required.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" class="form-control" id="editAddress" placeholder="Street address">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveProfile()">Save Changes</button>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div class="card">
+              <div class="card-header"><div class="card-header-left"><h3>Your Account</h3></div></div>
+              <div class="card-body">
+                <p style="font-size:13px; color:var(--gray-500); line-height:1.8;">Signed in as <b id="accountEmail" style="color:var(--gray-800);">—</b><br>Role: <b>Patient</b><br>Only you can see this record. Hospital staff see it when they treat you.</p>
+                <a href="my-appointments.html" class="btn btn-outline btn-sm" style="margin-top:10px;">View My Appointments →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No profile yet: create it -->
+      <div id="createWrap" style="display:none;">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-left"><h3>Complete Your Profile</h3><p>One-time setup — your patient record is created from these details</p></div>
+            </div>
+            <div class="card-body">
+              <form id="createForm" novalidate>
+                <div class="form-section">
+                  <div class="form-section-title">Personal Details</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label class="form-label">First Name <span class="required">*</span></label>
+                      <input type="text" class="form-control" id="firstName" required>
+                      <span class="form-error">First name is required.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Last Name <span class="required">*</span></label>
+                      <input type="text" class="form-control" id="lastName" required>
+                      <span class="form-error">Last name is required.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Date of Birth <span class="required">*</span></label>
+                      <input type="date" class="form-control" id="dob" required>
+                      <span class="form-error">Date of birth is required.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Gender <span class="required">*</span></label>
+                      <select class="form-control" id="gender" required>
+                        <option value="">Select gender</option>
+                        <option>Male</option><option>Female</option><option>Other</option>
+                      </select>
+                      <span class="form-error">Please select a gender.</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Blood Group</label>
+                      <select class="form-control" id="bloodGroup">
+                        <option value="">Select blood group</option>
+                        <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                        <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Phone Number <span class="required">*</span></label>
+                      <input type="tel" class="form-control" id="phone" placeholder="e.g. 9876543210" required>
+                      <span class="form-error">Valid phone number is required.</span>
+                    </div>
+                    <div class="form-group full">
+                      <label class="form-label">Email Address</label>
+                      <input type="email" class="form-control" id="email" disabled>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="card-footer">
+              <button type="button" class="btn btn-primary" id="createBtn" onclick="createProfile()">Create My Profile</button>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div class="card">
+              <div class="card-header"><div class="card-header-left"><h3>Why is this needed?</h3></div></div>
+              <div class="card-body">
+                <p style="font-size:13px; color:var(--gray-500); line-height:1.8;">Appointments are booked against a patient record. Your login email links your account to that record, so your bookings stay yours.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'my-profile', title: 'My Profile', subtitle: 'My Care' });
+
+  let myPatient = null;
+
+  async function init() {
+    const email = getMyEmail();
+    document.getElementById('accountEmail').textContent = email || '—';
+    if (!email) { showToast('Could not read your account email. Please sign in again.', 'error'); return; }
+
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      myPatient = res.patient;
+      sessionStorage.setItem('hms_pid', String(myPatient.patient_id));
+      document.getElementById('pidBadge').textContent = 'PID-' + String(myPatient.patient_id).padStart(4, '0');
+      document.getElementById('viewName').value = (myPatient.first_name || '') + ' ' + (myPatient.last_name || '');
+      document.getElementById('viewEmail').value = myPatient.email || email;
+      document.getElementById('viewDob').value = myPatient.date_of_birth || '—';
+      document.getElementById('viewGender').value = myPatient.gender || '—';
+      document.getElementById('viewBlood').value = myPatient.blood_group || '—';
+      document.getElementById('viewReg').value = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
+      document.getElementById('editPhone').value = myPatient.phone || '';
+      document.getElementById('editAddress').value = myPatient.address || '';
+      document.getElementById('profileWrap').style.display = 'block';
+    } else {
+      // Prefill from the account name/email; the patient record is created on submit.
+      const name = (localStorage.getItem('hms_user') || sessionStorage.getItem('hms_user') || '').trim();
+      const parts = name.split(/\s+/).filter(Boolean);
+      document.getElementById('firstName').value = parts[0] || '';
+      document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
+      document.getElementById('email').value = email;
+      document.getElementById('createWrap').style.display = 'block';
+    }
+  }
+
+  async function saveProfile() {
+    const phone = document.getElementById('editPhone').value.trim();
+    if (!phone) { document.getElementById('editPhone').classList.add('is-invalid'); showToast('Please enter a phone number.', 'warning'); return; }
+    document.getElementById('editPhone').classList.remove('is-invalid');
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    const res = await PatientsAPI.update(myPatient.patient_id, {
+      phone,
+      address: document.getElementById('editAddress').value.trim(),
+    });
+    btn.textContent = 'Save Changes'; btn.disabled = false;
+    if (res) showToast('Profile updated.', 'success');
+  }
+
+  async function createProfile() {
+    const fields = ['firstName', 'lastName', 'dob', 'gender', 'phone'];
+    let valid = true;
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) { el.classList.add('is-invalid'); valid = false; }
+      else el.classList.remove('is-invalid');
+    });
+    if (!valid) { showToast('Please fill in all required fields.', 'warning'); return; }
+
+    const btn = document.getElementById('createBtn');
+    btn.textContent = 'Creating…'; btn.disabled = true;
+    const res = await PatientsAPI.create({
+      first_name: document.getElementById('firstName').value.trim(),
+      last_name: document.getElementById('lastName').value.trim(),
+      date_of_birth: document.getElementById('dob').value,
+      gender: document.getElementById('gender').value,
+      blood_group: document.getElementById('bloodGroup').value,
+      phone: document.getElementById('phone').value.trim(),
+      email: getMyEmail(),
+    });
+    btn.textContent = 'Create My Profile'; btn.disabled = false;
+    if (res) {
+      const pid = res.patient_id || res.id;
+      if (pid) sessionStorage.setItem('hms_pid', String(pid));
+      showToast('Profile created! You can now book appointments.', 'success');
+      setTimeout(() => { window.location.reload(); }, 900);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
