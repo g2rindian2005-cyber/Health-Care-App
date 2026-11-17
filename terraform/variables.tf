@@ -63,7 +63,7 @@ variable "ses_smtp_password" {
 variable "ses_from_email" {
   description = "Verified SES sender email"
   type        = string
-  default     = "gr0735618@gmail.com"
+  default     = "gokul9356782322@gmail.com"
 }
 
 # ---- Outgoing mail (SMTP) ----

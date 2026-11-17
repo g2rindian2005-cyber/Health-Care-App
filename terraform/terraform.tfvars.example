@@ -15,9 +15,9 @@ ssh_key_name      = "hospital-key"   # create this key pair in AWS first
 # ---- SES SMTP (from SES > SMTP Settings > Create My SMTP Credentials) ----
 smtp_host       = "smtp.gmail.com"
 smtp_port       = "587"
-ses_smtp_username = "gr0735618@gmail.com"
+ses_smtp_username = "gokul9356782322@gmail.com"
 ses_smtp_password  = "kegtdqfktjxvtmzl"
-ses_from_email     = "gr0735618@gmail.com"   # verify this address in SES
+ses_from_email     = "gokul9356782322@gmail.com"   # verify this address in SES
 
 # ---- Gmail SMTP for OTP mail (recommended — OTP arrives by email) ----
 # The Lambda sends the OTP through Gmail instead of SES when these are set.
@@ -27,6 +27,6 @@ ses_from_email     = "gr0735618@gmail.com"   # verify this address in SES
 # never commit the App Password to the repo.
 # smtp_host       = "smtp.gmail.com"
 # smtp_port       = "587"
-# smtp_username   = "gr0735618@gmail.com"
-# smtp_password   = "<16-digit App Password for gr0735618@gmail.com>"
-# smtp_from_email = "gr0735618@gmail.com"
+# smtp_username   = "gokul9356782322@gmail.com"
+# smtp_password   = "<16-digit App Password for gokul9356782322@gmail.com>"
+# smtp_from_email = "gokul9356782322@gmail.com"
