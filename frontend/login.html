@@ -8,6 +8,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=10">
+  <style>
+    /* Sign in as Patient or Admin — segmented choice above the form */
+    .role-toggle { display:flex; gap:6px; background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:4px; margin-bottom:20px; }
+    .role-toggle button { flex:1; padding:10px 8px; border:0; border-radius:9px;
+      background:transparent; color:#cbd5e1; font-family:inherit; font-size:14px;
+      font-weight:600; cursor:pointer; transition:background .15s ease, color .15s ease; }
+    .role-toggle button:hover { color:#ffffff; }
+    .role-toggle button.active { background:linear-gradient(135deg,#2563eb,#0d9488); color:#ffffff;
+      box-shadow:0 2px 10px rgba(37,99,235,0.45); }
+  </style>
 </head>
 <body>
 
@@ -66,10 +77,14 @@
       </div>
 
       <h2 id="loginTitle">Welcome back</h2>
-      <p class="login-subtitle" id="loginSubtitle">Sign in to your hospital administrator account</p>
+      <p class="login-subtitle" id="loginSubtitle">Sign in to your HealtheCare account</p>
 
       <form id="loginForm" novalidate>
        <div id="step1">
+        <div class="role-toggle" id="roleToggle" role="tablist" aria-label="Sign in as">
+          <button type="button" id="rolePatientBtn" class="active" data-role="patient">👤 Patient</button>
+          <button type="button" id="roleAdminBtn" data-role="admin">🛡 Admin</button>
+        </div>
         <div class="form-group">
           <label class="form-label" for="username">Username or Email</label>
           <input type="text" id="username" class="form-control" placeholder="admin" autocomplete="username" required>
@@ -125,8 +140,11 @@
         </button>
       </form>
 
-      <p style="text-align:center; margin-top:20px; font-size:13px; color:#9ca3af;">
+      <p id="registerRow" style="text-align:center; margin-top:20px; font-size:13px; color:#9ca3af;">
         Don't have an account? <a href="register.html" style="color:#60a5fa; font-weight:600;">Create one →</a>
+      </p>
+      <p id="adminNote" style="display:none; text-align:center; margin-top:20px; font-size:13px; color:#9ca3af;">
+        Admin accounts are created by the hospital.
       </p>
 
       <p style="text-align:center; margin-top:20px; font-size:12px; color:#9ca3af;">
@@ -180,20 +198,55 @@
     document.getElementById('step2').style.display = step === 2 ? 'block' : 'none';
     document.getElementById('loginTitle').textContent = step === 1 ? 'Welcome back' : 'Check your inbox';
     document.getElementById('loginSubtitle').textContent = step === 1
-      ? 'Sign in to your HealtheCare account'
+      ? (selectedRole === 'admin' ? 'Sign in to manage the hospital' : 'Sign in to your HealtheCare account')
       : 'Enter the 6-digit code we emailed you';
     document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : 'Verify & Sign In';
   }
+
+  /* ── Sign in as Patient or Admin ──────────────────────────────────
+     The buttons choose which side you want to open. The account itself
+     still decides: an admin account always opens the dashboard, a patient
+     account always opens the patient panel. If the choice and the account
+     disagree, finishLogin says so and opens the right side anyway. */
+  let selectedRole = 'patient';
+  try { selectedRole = localStorage.getItem('hms_login_role') || 'patient'; } catch (e) {}
+  if (selectedRole !== 'admin') selectedRole = 'patient';
+
+  function applyRoleUI() {
+    document.getElementById('rolePatientBtn').classList.toggle('active', selectedRole === 'patient');
+    document.getElementById('roleAdminBtn').classList.toggle('active', selectedRole === 'admin');
+    document.getElementById('username').placeholder = selectedRole === 'admin' ? 'admin' : 'you@example.com';
+    document.getElementById('registerRow').style.display = selectedRole === 'admin' ? 'none' : 'block';
+    document.getElementById('adminNote').style.display = selectedRole === 'admin' ? 'block' : 'none';
+    if (step === 1) {
+      document.getElementById('loginSubtitle').textContent = selectedRole === 'admin'
+        ? 'Sign in to manage the hospital'
+        : 'Sign in to your HealtheCare account';
+    }
+    try { localStorage.setItem('hms_login_role', selectedRole); } catch (e) {}
+  }
+  document.getElementById('rolePatientBtn').addEventListener('click', () => { selectedRole = 'patient'; applyRoleUI(); });
+  document.getElementById('roleAdminBtn').addEventListener('click', () => { selectedRole = 'admin'; applyRoleUI(); });
+  applyRoleUI();
 
   function finishLogin(token, name, role) {
     const remember = document.getElementById('rememberMe').checked;
     const store = remember ? localStorage : sessionStorage;
     setToken(token, remember);
     store.setItem('hms_user', name || savedU);
-    store.setItem('hms_role', role || 'admin');
-    showToast(role === 'patient' ? 'Welcome back!' : 'Welcome back, Administrator!', 'success', 'Logged In');
+    const actualRole = role || 'admin';
+    store.setItem('hms_role', actualRole);
     // Patients land on their own panel; admins on the dashboard.
-    setTimeout(() => { window.location.href = role === 'patient' ? 'patient/my-appointments.html' : 'dashboard.html'; }, 700);
+    let delay = 700;
+    if (actualRole !== selectedRole) {
+      delay = 2600;
+      showToast(actualRole === 'patient'
+        ? 'This is a patient account — opening your patient panel.'
+        : 'This is an administrator account — opening the dashboard.', 'info', 'Signed In');
+    } else {
+      showToast(actualRole === 'patient' ? 'Welcome back!' : 'Welcome back, Administrator!', 'success', 'Logged In');
+    }
+    setTimeout(() => { window.location.href = actualRole === 'patient' ? 'patient/my-appointments.html' : 'dashboard.html'; }, delay);
   }
 
   async function requestOtp(u, p) {
