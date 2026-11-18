@@ -512,9 +512,11 @@ resource "aws_cognito_user_pool" "hospital" {
   }
   # Custom attribute, set by the migration Lambda for migrated users
   # (and read by the frontend + doctor Lambda as a fallback role).
-  # Custom attribute names carry the "custom:" prefix in Terraform.
+  # NOTE: the schema name is just "role" — Cognito adds the "custom:"
+  # prefix itself (the token claim is custom:role). Naming it
+  # "custom:role" here is rejected by the Cognito API.
   schema {
-    name                = "custom:role"
+    name                = "role"
     attribute_data_type = "String"
     required            = false
     mutable             = true
@@ -835,6 +837,17 @@ resource "aws_s3_bucket_versioning" "frontend" {
   versioning_configuration { status = "Enabled" }
 }
 
+# New AWS accounts block public policies at the ACCOUNT level by
+# default, and the public-read bucket policy below is rejected until
+# that account-level block is off (the bucket-level block alone is
+# not enough).
+resource "aws_s3_account_public_access_block" "frontend" {
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket                  = aws_s3_bucket.frontend.id
   block_public_acls       = false
@@ -861,7 +874,7 @@ resource "aws_s3_bucket_policy" "frontend_public_read" {
       Resource  = "${aws_s3_bucket.frontend.arn}/*"
     }]
   })
-  depends_on = [aws_s3_bucket_public_access_block.frontend]
+  depends_on = [aws_s3_bucket_public_access_block.frontend, aws_s3_account_public_access_block.frontend]
 }
 
 # Frontend API config — written by Terraform on every apply, so the
