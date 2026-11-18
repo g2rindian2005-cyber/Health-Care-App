@@ -31,15 +31,68 @@ all deployed with **Terraform**.
 ## Project structure
 
 ```
-├── frontend/            → Website (login, dashboard, patient panel)
-│   ├── patient/         → my-appointments, book-appointment, my-profile
-│   ├── patients/ billing/ diseases/ doctors/ laboratory/ pharmacy/
-│   └── js/              → api.js, ui.js (api.js talks to the API)
-├── backend/             → 7 Lambda services + db-init-lambda (seeds sample data)
-├── terraform/           → main.tf, variables.tf, outputs.tf
-├── docs/                → architecture, API docs, CI/CD
-├── config/              → config.py + .env.example
-└── .github/workflows/   → CI/CD pipeline
+Health-Care-App/
+├── .github/workflows/
+│   └── main.yml                    # CI/CD pipeline
+├── aws/                            # AWS docs
+│   ├── api-gateway/api-routes.md
+│   ├── iam/iam-policies.json
+│   ├── lambda/deployment-guide.md
+│   ├── s3/bucket-configuration.md
+│   └── ses-smtp/email-configuration.md
+├── backend/                        # 7 Lambdas + helpers
+│   ├── billing-lambda/             # dynamodb.py, lambda_function.py
+│   ├── cognito-migration-lambda/   # NEW — old users migrate to Cognito
+│   ├── db-init-lambda/             # seeds sample data (10 seed JSONs)
+│   ├── disease-lambda/
+│   ├── doctor-lambda/              # + cognito_auth.py (RS256/JWKS)
+│   ├── lab-lambda/
+│   ├── patient-lambda/
+│   ├── pharmacy-lambda/
+│   └── test-events/                # ready-to-run Lambda test events
+├── config/
+│   └── .env.example
+├── database/README.md
+├── docs/
+│   ├── CICD.md
+│   ├── MANUAL_DEPLOY.md            # ⚠️ stale — Cognito refresh pending
+│   ├── api-documentation.md
+│   ├── architecture.md
+│   └── deployment-guide.md
+├── email/                          # email templates + SMTP helpers
+│   ├── templates/ (appointment, bill, payment-receipt, registration)
+│   ├── send_email.py
+│   └── smtp_config.py
+├── frontend/                       # website
+│   ├── billing/ (create-bill, payment, pending-dues)
+│   ├── css/style.css
+│   ├── diseases/ (add-disease, disease-history)
+│   ├── doctors/ (add-doctor, appointments, assign-doctor)
+│   ├── js/ (api.js, ui.js)         # only 2 JS files — rest deleted
+│   ├── laboratory/ (lab-orders, order-test, test-catalog)
+│   ├── patient/ (book-appointment, my-appointments, my-profile)
+│   ├── patients/ (add-patient, patient-history, view-patient)
+│   ├── pharmacy/ (add-prescription, medicine-catalog, prescriptions)
+│   ├── dashboard.html
+│   ├── index.html
+│   ├── login.html                  # Cognito sign-in + Patient/Admin toggle
+│   ├── register.html               # Cognito sign-up
+│   ├── reports.html
+│   └── settings.html
+├── scripts/
+│   ├── ensure_db_init_lambda.py
+│   └── validate_frontend.py
+├── terraform/                      # infra as code
+│   ├── main.tf                     # DynamoDB, Lambdas, API GW, Cognito pool
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── terraform.tfvars.example
+│   ├── deploy.sh
+│   └── build_layer.py
+├── tests/                          # NEW — Cognito tests (3 files)
+├── .gitignore
+├── README.md
+└── requirements.txt
 ```
 
 ---
@@ -64,8 +117,9 @@ git clone https://github.com/g2rindian2005-cyber/Health-Care-App.git
 cd Health-Care-App/terraform
 ```
 
-Already have it? `git pull` first (if `config/config.py` has local
-changes, `git stash` before pulling, then `git stash pop`).
+Already have it? `git pull` first. (If you changed `config/config.py`
+locally, discard those changes first — that file no longer exists in
+the repo.)
 
 ## 2. Fill in your values
 
