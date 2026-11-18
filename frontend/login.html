@@ -110,9 +110,36 @@
             <input type="checkbox" id="rememberMe">
             Remember me
           </label>
-          <a href="#" class="forgot-link">Forgot password?</a>
+          <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
         </div>
        </div><!-- /step1 -->
+
+       <div id="step3" style="display:none">
+        <div class="form-group" id="resetEmailGroup">
+          <label class="form-label" for="resetEmail">Email</label>
+          <input type="email" id="resetEmail" class="form-control" placeholder="you@example.com" autocomplete="email">
+          <span class="form-error" id="resetEmailError">Please enter your email.</span>
+        </div>
+        <div id="resetCodeGroup" style="display:none">
+          <div class="form-group">
+            <label class="form-label" for="resetCode">Verification Code</label>
+            <input type="text" id="resetCode" class="form-control" placeholder="••••••"
+                   inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                   style="text-align:center; font-size:22px; letter-spacing:10px; font-weight:700;">
+            <span class="form-error" id="resetCodeError">Please enter the 6-digit code.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="resetNewPassword">New Password</label>
+            <input type="password" id="resetNewPassword" class="form-control" placeholder="At least 6 characters" autocomplete="new-password">
+            <span class="form-error" id="resetPasswordError">Password must be at least 6 characters.</span>
+          </div>
+        </div>
+        <p id="resetHint" style="font-size:13px; color:#6b7280; margin:2px 0 8px;"></p>
+        <div class="login-options" style="margin-top:4px;">
+          <a href="#" class="forgot-link" id="resetBack">← Back to sign in</a>
+          <a href="#" class="forgot-link" id="resetResend" style="display:none">Resend code</a>
+        </div>
+       </div><!-- /step3 -->
 
        <div id="step2" style="display:none">
         <div class="form-group">
@@ -200,15 +227,20 @@
      Cognito says the email is not confirmed yet): the code Cognito
      emailed at sign-up, then sign in again. */
   let step = 1, savedU = '', savedP = '';
+  /* Step 3 — forgot password: phase 1 sends the reset code to the
+     email, phase 2 takes the code + new password. */
+  let resetPhase = 1, resetEmail = '';
 
   function setStepUI() {
     document.getElementById('step1').style.display = step === 1 ? 'block' : 'none';
     document.getElementById('step2').style.display = step === 2 ? 'block' : 'none';
-    document.getElementById('loginTitle').textContent = step === 1 ? 'Welcome back' : 'Check your inbox';
+    document.getElementById('step3').style.display = step === 3 ? 'block' : 'none';
+    document.getElementById('loginTitle').textContent = step === 1 ? 'Welcome back' : step === 2 ? 'Check your inbox' : 'Reset password';
     document.getElementById('loginSubtitle').textContent = step === 1
       ? (selectedRole === 'admin' ? 'Sign in to manage the hospital' : 'Sign in to your HealtheCare account')
-      : 'Enter the 6-digit code we emailed you';
-    document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : 'Verify & Sign In';
+      : step === 2 ? 'Enter the 6-digit code we emailed you'
+      : 'We will email you a code to reset your password';
+    document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : step === 2 ? 'Verify & Sign In' : (resetPhase === 1 ? 'Send Code' : 'Reset Password');
   }
 
   /* ── Sign in as Patient or Admin ──────────────────────────────────
@@ -308,6 +340,64 @@
       return;
     }
 
+    /* Step 3: forgot password. Phase 1 sends the reset code to the
+       email; phase 2 confirms the code + new password, then returns
+       to sign-in. */
+    if (step === 3) {
+      if (resetPhase === 1) {
+        const em = document.getElementById('resetEmail').value.trim();
+        document.getElementById('resetEmail').classList.toggle('is-invalid', !em || !em.includes('@'));
+        if (!em || !em.includes('@')) return;
+        setLoading(true);
+        try {
+          const data = await AuthAPI.forgotPassword(em);
+          resetEmail = em;
+          resetPhase = 2;
+          setLoading(false);
+          setStepUI();
+          document.getElementById('resetCodeGroup').style.display = 'block';
+          document.getElementById('resetResend').style.display = 'inline';
+          document.getElementById('resetHint').textContent = 'Code sent to ' + (data.destination || em) + ' — enter it below with your new password.';
+          document.getElementById('resetCode').focus();
+        } catch (err) {
+          setLoading(false);
+          showToast(err && err.code === 'UserNotFoundException'
+            ? 'No account found for this email.'
+            : err && err.code === 'LimitExceededException'
+            ? 'Too many attempts. Please try again in a few minutes.'
+            : (err && err.message) || 'Could not send the code. Please try again.', 'error', 'Reset Failed');
+        }
+        return;
+      }
+      const code = document.getElementById('resetCode').value.trim();
+      const np = document.getElementById('resetNewPassword').value;
+      document.getElementById('resetCode').classList.toggle('is-invalid', code.length !== 6);
+      document.getElementById('resetNewPassword').classList.toggle('is-invalid', np.length < 6);
+      if (code.length !== 6 || np.length < 6) return;
+      setLoading(true);
+      try {
+        await AuthAPI.confirmPassword(resetEmail, code, np);
+        setLoading(false);
+        showToast('Password changed. Sign in with your new password.', 'success', 'Password Reset');
+        step = 1; resetPhase = 1;
+        setStepUI();
+        document.getElementById('resetCodeGroup').style.display = 'none';
+        document.getElementById('resetResend').style.display = 'none';
+        document.getElementById('resetCode').value = '';
+        document.getElementById('resetNewPassword').value = '';
+        pwd.value = '';
+        pwd.focus();
+      } catch (err) {
+        setLoading(false);
+        showToast(err && err.code === 'InvalidPasswordException'
+          ? 'Password must be at least 6 characters.'
+          : err && (err.code === 'CodeMismatchException' || err.code === 'ExpiredCodeException')
+          ? 'Invalid or expired code. Please try again or resend the code.'
+          : (err && err.message) || 'Could not reset the password. Please try again.', 'error', 'Reset Failed');
+      }
+      return;
+    }
+
     const u = document.getElementById('username').value.trim();
     const p = pwd.value;
     document.getElementById('username').classList.toggle('is-invalid', !u);
@@ -339,6 +429,36 @@
     e.preventDefault();
     step = 1;
     setStepUI();
+  });
+
+  /* Forgot password? — open the reset step, pre-filling the email
+     from the sign-in box when it looks like an email. */
+  document.getElementById('forgotLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    step = 3;
+    resetPhase = 1;
+    const u = document.getElementById('username').value.trim();
+    document.getElementById('resetEmail').value = u.includes('@') ? u : '';
+    document.getElementById('resetCodeGroup').style.display = 'none';
+    document.getElementById('resetResend').style.display = 'none';
+    document.getElementById('resetHint').textContent = '';
+    setStepUI();
+    document.getElementById('resetEmail').focus();
+  });
+  document.getElementById('resetBack').addEventListener('click', (e) => {
+    e.preventDefault();
+    step = 1;
+    setStepUI();
+  });
+  document.getElementById('resetResend').addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    try {
+      await AuthAPI.forgotPassword(resetEmail);
+      showToast('A new code was sent.', 'success', 'Code Resent');
+    } catch (err) {
+      showToast('Could not resend the code. Please try again.', 'error', 'Resend Failed');
+    }
   });
 
   /* Clear the red error border while typing */

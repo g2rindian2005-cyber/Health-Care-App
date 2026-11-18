@@ -160,14 +160,19 @@ def _handle_post_auth(event):
     groups = (request.get("groupConfiguration") or {}).get("groupsToOverride") or []
     if groups:
         return event
-    email = (event.get("userName") or "").strip().lower()
+    # userName is the Cognito Username — for email sign-in accounts
+    # that is a generated UUID, NOT the email. The role decision must
+    # use the email attribute, or every admin lands in Patients.
+    attrs = request.get("userAttributes") or {}
+    email = (attrs.get("email") or event.get("userName") or "").strip().lower()
+    username = event.get("userName") or ""
     pool_id = event.get("userPoolId") or ""
-    if not email or not pool_id:
+    if not email or not pool_id or not username:
         return event
     group = "Admins" if _role_for(email) == "admin" else "Patients"
     try:
         boto3.client("cognito-idp").admin_add_user_to_group(
-            UserPoolId=pool_id, Username=email, GroupName=group
+            UserPoolId=pool_id, Username=username, GroupName=group
         )
     except Exception as exc:
         # Sign-in already succeeded; the group is fixed on the next

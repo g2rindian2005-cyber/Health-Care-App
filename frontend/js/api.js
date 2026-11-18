@@ -272,6 +272,37 @@ const AuthAPI = {
       }
     );
   }),
+  // Forgot password: ask Cognito to email a reset code. Resolves
+  // { destination } with the masked email the code went to. The page
+  // then asks for the code + new password and calls confirmPassword.
+  // Rejects with the Cognito error (UserNotFoundException,
+  // LimitExceededException, ...).
+  forgotPassword: (email) => new Promise((resolve, reject) => {
+    const user = _cognitoUser(email);
+    if (!user) return reject(new Error("Sign-in is not configured yet"));
+    let done = false;
+    const finish = (data) => {
+      if (done) return; done = true;
+      const dest = (data && data.CodeDeliveryDetails && data.CodeDeliveryDetails.Destination) || email;
+      resolve({ destination: dest });
+    };
+    user.forgotPassword({
+      onSuccess: finish,
+      onFailure: (err) => { if (!done) { done = true; reject(err); } },
+      inputVerificationCode: finish,
+    });
+  }),
+  // Confirm the emailed reset code and set the new password.
+  // Resolves {} on success. Rejects with CodeMismatchException
+  // (wrong code), ExpiredCodeException, or InvalidPasswordException.
+  confirmPassword: (email, code, newPassword) => new Promise((resolve, reject) => {
+    const user = _cognitoUser(email);
+    if (!user) return reject(new Error("Sign-in is not configured yet"));
+    user.confirmPassword(code, newPassword, {
+      onSuccess: () => resolve({}),
+      onFailure: (err) => reject(err),
+    });
+  }),
   // End the Cognito session and drop the stored token.
   signOut: () => {
     const pool = _cognitoPool();
