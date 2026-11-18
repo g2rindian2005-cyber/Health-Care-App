@@ -1,0 +1,423 @@
+name: CI/CD Pipeline
+
+# PR  -> build + test only.
+# main -> build + test, then deploy Lambda code, seed DynamoDB and publish
+#         the frontend to S3 (GitHub Pages and EC2 are optional).
+#
+# Infrastructure is created once with Terraform (terraform apply, run
+# locally). This workflow never runs terraform apply.
+#
+# Repo Secrets   (required): AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+# Repo Variables (optional): API_BASE_URL   - e.g. https://80paax5h1i.execute-api.us-east-1.amazonaws.com/prod
+#                                             (if empty, it is looked up from API Gateway)
+#                            AWS_REGION, PROJECT_NAME, API_STAGE, FRONTEND_BUCKET
+#                            DEPLOY_GH_PAGES = true   (publish to gh-pages too)
+#                            EC2_HOST, EC2_USER + secret EC2_SSH_KEY (refresh EC2)
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'hospital' }}
+  API_STAGE: ${{ vars.API_STAGE || 'prod' }}
+  FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET || 'hospital-management-frontend-bucket' }}
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+  TERRAFORM_VERSION: "1.9.8"
+
+jobs:
+  # ------------------------------------------------------------------
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Test frontend JavaScript syntax
+        run: python scripts/validate_frontend.py
+
+      - name: Compile all Lambda Python code
+        run: python -m compileall -q backend
+
+      - name: Install Lambda test dependencies
+        run: python -m pip install -r backend/patient-lambda/requirements.txt
+
+      - name: Import-test Lambda handlers
+        run: |
+          set -euo pipefail
+          for dir in backend/patient-lambda backend/billing-lambda backend/disease-lambda backend/doctor-lambda backend/lab-lambda backend/pharmacy-lambda backend/db-init-lambda backend/cognito-migration-lambda; do
+            echo "Importing $dir"
+            (cd "$dir" && python -c "import lambda_function; assert callable(lambda_function.lambda_handler)")
+          done
+
+      - name: Smoke test Cognito migration Lambda
+        env:
+          AUTH_EMAIL: admin@example.com
+          AUTH_PASSWORD: ci-only-password
+          USERS_TABLE: ""
+        run: |
+          PYTHONPATH=backend/cognito-migration-lambda python - <<'PY'
+          import lambda_function
+
+          # An unknown user must fail (Cognito treats a raised error
+          # as a failed sign-in); a trigger the handler does not know
+          # must pass through untouched.
+          event = {
+              "triggerSource": "UserMigration_Authentication",
+              "userName": "nobody@example.com",
+              "request": {"password": "wrong"},
+              "response": {},
+          }
+          try:
+              lambda_function.lambda_handler(event, None)
+          except Exception as exc:
+              assert str(exc) == "Invalid credentials", exc
+              print("Migration Lambda smoke test passed (unknown user rejected)")
+          else:
+              raise SystemExit("migration Lambda accepted an unknown user")
+          PY
+
+      # Terraform checks are advisory: this workflow does not apply
+      # infrastructure, so a formatting nit must never block a deploy.
+      - name: Terraform format (advisory)
+        working-directory: terraform
+        continue-on-error: true
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate (advisory)
+        working-directory: terraform
+        continue-on-error: true
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Build Lambda dependency layer
+        run: |
+          set -euo pipefail
+          rm -rf build-layer dist
+          mkdir -p build-layer/python dist/layer
+          # boto3/botocore already ship with the Lambda runtime, so only the
+          # extra packages go in the layer. Wheels are forced to the Lambda
+          # platform (Linux x86_64, CPython 3.11).
+          grep -viE '^(boto3|botocore)' backend/patient-lambda/requirements.txt > build-layer/requirements.txt
+          python -m pip install \
+            -r build-layer/requirements.txt \
+            --platform manylinux2014_x86_64 \
+            --implementation cp \
+            --python-version 3.11 \
+            --only-binary=:all: \
+            --target build-layer/python
+          (cd build-layer && zip -qr "$GITHUB_WORKSPACE/dist/layer/deps-layer.zip" python)
+          ls -lh dist/layer/deps-layer.zip
+
+      - name: Package frontend and Lambda functions
+        run: |
+          set -euo pipefail
+          mkdir -p dist/frontend dist/lambda
+          cp -R frontend/. dist/frontend/
+
+          declare -A services=(
+            [patient]="patient-lambda"
+            [billing]="billing-lambda"
+            [disease]="disease-lambda"
+            [doctor]="doctor-lambda"
+            [lab]="lab-lambda"
+            [pharmacy]="pharmacy-lambda"
+            [cognito-migration]="cognito-migration-lambda"
+            [db-init]="db-init-lambda"
+          )
+          for name in "${!services[@]}"; do
+            (cd "backend/${services[$name]}" && zip -qr "$GITHUB_WORKSPACE/dist/lambda/$name.zip" . -x '__pycache__/*' '*.pyc')
+          done
+          find dist -type f -print
+
+      - name: Package build artifact
+        run: zip -qr hospital-build.zip dist
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-build-${{ github.sha }}
+          path: hospital-build.zip
+          retention-days: 14
+
+  # ------------------------------------------------------------------
+  deploy:
+    name: Deploy to AWS
+    needs: build-test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    environment:
+      name: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    env:
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hospital-build-${{ github.sha }}
+
+      - name: Unpack build artifact
+        run: unzip -q hospital-build.zip
+
+      - name: Check required deployment secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+            echo "::error::Missing GitHub secrets. Add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY under Settings -> Secrets and variables -> Actions -> Secrets."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS account
+        run: aws sts get-caller-identity
+
+      # Uses the API_BASE_URL variable when set, otherwise finds the
+      # "<project>-api" REST API in this account/region. This removes the
+      # need to edit any file after a fresh `terraform apply`.
+      - name: Resolve API URL
+        run: |
+          set -euo pipefail
+          url="${API_BASE_URL:-}"
+          if [ -z "$url" ]; then
+            api_id=$(aws apigateway get-rest-apis \
+              --query "items[?name=='${PROJECT_NAME}-api'].id | [0]" --output text 2>/dev/null || true)
+            if [ -z "$api_id" ] || [ "$api_id" = "None" ]; then
+              echo "::error::Could not find API Gateway '${PROJECT_NAME}-api' in $AWS_REGION. Run terraform apply first, or set the repo Variable API_BASE_URL to the api_gateway_url output."
+              exit 1
+            fi
+            url="https://${api_id}.execute-api.${AWS_REGION}.amazonaws.com/${API_STAGE}"
+          fi
+          url="${url%/}"
+          echo "API_BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "Using API: $url"
+
+      - name: Point frontend at the API
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+
+          api_base = os.environ["API_BASE_URL"]
+          api_file = Path("dist/frontend/js/api.js")
+          source = api_file.read_text(encoding="utf-8")
+          # Matches the placeholder AND any previously hard-coded API URL.
+          pattern = re.compile(r"https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/[A-Za-z0-9_-]+")
+          new_source, count = pattern.subn(api_base, source)
+          if count == 0:
+              raise SystemExit("::error::No execute-api URL found in frontend/js/api.js to replace")
+          api_file.write_text(new_source, encoding="utf-8")
+          print(f"Frontend API configured for {api_base} ({count} replacement(s))")
+          PY
+
+      - name: Deploy Lambda functions and dependency layer
+        run: |
+          set -euo pipefail
+          layer_arn=$(aws lambda publish-layer-version \
+            --layer-name "$PROJECT_NAME-deps" \
+            --description "GitHub Actions $GITHUB_SHA" \
+            --zip-file "fileb://dist/layer/deps-layer.zip" \
+            --compatible-runtimes python3.11 \
+            --query LayerVersionArn --output text)
+          echo "Published dependency layer: $layer_arn"
+
+          for service in patient billing disease doctor lab pharmacy cognito-migration; do
+            function_name="$PROJECT_NAME-$service-service"
+            if ! aws lambda get-function --function-name "$function_name" >/dev/null 2>&1; then
+              echo "::error::Lambda $function_name does not exist in $AWS_REGION. Run terraform apply first."
+              exit 1
+            fi
+            echo "Deploying $function_name"
+            aws lambda update-function-code \
+              --function-name "$function_name" \
+              --zip-file "fileb://dist/lambda/$service.zip" >/dev/null
+            aws lambda wait function-updated --function-name "$function_name"
+            aws lambda update-function-configuration \
+              --function-name "$function_name" \
+              --layers "$layer_arn" >/dev/null
+            aws lambda wait function-updated --function-name "$function_name"
+          done
+
+      - name: Ensure db-init Lambda and seed DynamoDB
+        run: python3 scripts/ensure_db_init_lambda.py dist/lambda/db-init.zip
+
+      - name: Deploy frontend to S3
+        run: |
+          set -euo pipefail
+          if ! aws s3api head-bucket --bucket "$FRONTEND_BUCKET" 2>/dev/null; then
+            echo "::error::S3 bucket $FRONTEND_BUCKET not found or not accessible. Run terraform apply, or set the repo Variable FRONTEND_BUCKET."
+            exit 1
+          fi
+          aws s3 sync dist/frontend/ "s3://$FRONTEND_BUCKET/" --delete
+          echo "Frontend deployed to s3://$FRONTEND_BUCKET/"
+
+      # Optional: only when the repo Variable DEPLOY_GH_PAGES is "true".
+      - name: Publish to gh-pages branch
+        if: ${{ vars.DEPLOY_GH_PAGES == 'true' }}
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist/frontend
+          publish_branch: gh-pages
+          commit_message: "Deploy frontend ${{ github.sha }}"
+
+      # Optional: only when EC2_HOST and EC2_SSH_KEY are configured.
+      - name: Refresh EC2 frontend when SSH is configured
+        continue-on-error: true
+        env:
+          EC2_HOST: ${{ vars.EC2_HOST }}
+          EC2_USER: ${{ vars.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          if [ -z "${EC2_SSH_KEY:-}" ] || [ -z "${EC2_HOST:-}" ]; then
+            echo "EC2_HOST / EC2_SSH_KEY not configured; skipping the EC2 copy. The S3 deployment above is unaffected."
+            exit 0
+          fi
+          host="$EC2_HOST"
+          user="${EC2_USER:-ubuntu}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/hospital-key.pem
+          chmod 600 ~/.ssh/hospital-key.pem
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+
+          tar -C dist/frontend -czf /tmp/frontend.tgz .
+          scp -i ~/.ssh/hospital-key.pem /tmp/frontend.tgz "$user@$host:/tmp/frontend.tgz"
+          ssh -i ~/.ssh/hospital-key.pem "$user@$host" '
+            sudo mkdir -p /var/www/hospital &&
+            sudo tar -xzf /tmp/frontend.tgz -C /var/www/hospital &&
+            sudo chown -R www-data:www-data /var/www/hospital &&
+            (sudo systemctl reload nginx || sudo service nginx reload || true)
+          '
+          echo "EC2 frontend refreshed at $host"
+
+      - name: Smoke test live deployment
+        run: |
+          set -euo pipefail
+
+          # --- S3 website (us-east-1 supports both endpoint styles) ---
+          site=""
+          for candidate in \
+            "http://$FRONTEND_BUCKET.s3-website-$AWS_REGION.amazonaws.com" \
+            "http://$FRONTEND_BUCKET.s3-website.$AWS_REGION.amazonaws.com"; do
+            if curl -fsS --retry 5 --retry-delay 3 --retry-all-errors "$candidate/login.html" -o /tmp/login.html 2>/dev/null; then
+              site="$candidate"; break
+            fi
+          done
+          if [ -z "$site" ]; then
+            echo "::error::S3 website did not answer. Check bucket policy (public read) and static website hosting on $FRONTEND_BUCKET."
+            exit 1
+          fi
+          echo "S3 site OK: $site"
+          grep -q 'id="step2"' /tmp/login.html
+          curl -fsS "$site/js/api.js" -o /tmp/api.js
+          grep -Fq "$API_BASE_URL" /tmp/api.js \
+            || { echo "::error::Deployed api.js does not contain $API_BASE_URL"; exit 1; }
+
+          # --- API: the data endpoints answer without a token (the
+          # data Lambdas never required one; only the doctor Lambda
+          # checks the Cognito token, for appointment ownership) ---
+          echo "Checking API: $API_BASE_URL"
+          api_status=""
+          for attempt in 1 2 3 4 5; do
+            api_status=$(curl -s -o /tmp/patients-smoke.json -w '%{http_code}' \
+              "$API_BASE_URL/patients" || true)
+            [ "$api_status" = "200" ] && break
+            echo "Attempt $attempt: got HTTP $api_status, retrying..."
+            sleep 5
+          done
+          if [ "$api_status" != "200" ]; then
+            echo "::error::Expected 200 from GET /patients, got $api_status. 403 = route/stage missing in API Gateway, 502 = Lambda error or proxy integration off."
+            cat /tmp/patients-smoke.json || true
+            exit 1
+          fi
+          echo "API OK (GET /patients returns 200)"
+
+          # --- Data check: seeded patients are readable. Sign-in is
+          # Cognito now (no /auth/login any more), so this checks the
+          # data path directly. ---
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+
+          api = os.environ["API_BASE_URL"].rstrip("/")
+
+          def call(path):
+              req = urllib.request.Request(api + path, method="GET")
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.status, json.load(r)
+              except urllib.error.HTTPError as e:
+                  try:
+                      return e.code, json.load(e)
+                  except Exception:
+                      return e.code, {}
+
+          status, patients = call("/patients")
+          assert status == 200, f"GET /patients returned {status}: {patients}"
+          assert patients.get("count", 0) >= 1, f"expected seeded patients, got {patients}"
+          print(f"Data check passed: {patients['count']} patients in DynamoDB")
+          PY
+          echo "Live smoke tests passed"
+
+      - name: Write deployment summary
+        if: always()
+        run: |
+          {
+            echo "## Hospital CI/CD deployment"
+            echo ""
+            echo "- Commit: $GITHUB_SHA"
+            echo "- API: ${API_BASE_URL:-not resolved}"
+            echo "- S3 site: http://$FRONTEND_BUCKET.s3-website-$AWS_REGION.amazonaws.com/login.html"
+            echo "- Lambdas: patient, billing, disease, doctor, lab, pharmacy, cognito-migration, db-init"
+            echo "- Database: DynamoDB (PAY_PER_REQUEST), tables seeded by db-init"
+          } >> "$GITHUB_STEP_SUMMARY"
