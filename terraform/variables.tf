@@ -61,16 +61,15 @@ variable "ses_smtp_password" {
 }
 
 variable "ses_from_email" {
-  description = "Verified SES sender email"
+  description = "Verified SES sender email. Also the built-in admin's email (AUTH_EMAIL): the admin signs in to Cognito with this email."
   type        = string
   default     = "gokul9356782322@gmail.com"
 }
 
 # ---- Outgoing mail (SMTP) ----
-# By default the Lambdas send OTP mail through SES (the values above).
-# To send through Gmail SMTP instead — and keep it through every
-# apply — set these in terraform.tfvars. smtp_password is the Gmail
-# App Password, never the normal Gmail password.
+# Unused by sign-in since the Cognito migration — Cognito sends its
+# own verification emails, so there is no OTP mail any more. Left in
+# place (harmless) so existing tfvars files keep working.
 variable "smtp_host" {
   description = "SMTP host for OTP mail. Empty = SES endpoint for this region."
   type        = string
@@ -115,21 +114,26 @@ variable "lambda_timeout" {
   default     = 30
 }
 
+# ---- Auth (Cognito) ----
+# Sign-in is AWS Cognito now. These values are used only by the
+# Cognito User Migration Lambda (old users signing in for the first
+# time) — there is no auth Lambda and no JWT_SECRET any more. The
+# declarations stay so existing terraform.tfvars files keep parsing.
 variable "auth_admin_username" {
-  description = "Admin username for POST /auth/login"
+  description = "UNUSED since the Cognito migration (Cognito usernames are emails; the admin signs in with ses_from_email). Kept so existing tfvars files still parse."
   type        = string
   default     = "admin"
 }
 
 variable "auth_admin_password" {
-  description = "Admin password for POST /auth/login (default matches the live login; override in tfvars)"
+  description = "Built-in admin password. Used only by the Cognito migration Lambda: the admin signs in with ses_from_email + this password, and lands in the Admins group."
   type        = string
   sensitive   = true
   default     = "admin123"
 }
 
 variable "jwt_secret" {
-  description = "Secret used to sign login JWTs. Leave empty to auto-generate one (stored only in Terraform state); set in tfvars to use your own."
+  description = "UNUSED since the Cognito migration (tokens are Cognito RS256 JWTs verified against the pool JWKS). Kept so existing tfvars files still parse."
   type        = string
   sensitive   = true
   default     = ""

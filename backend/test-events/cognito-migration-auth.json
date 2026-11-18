@@ -1,0 +1,1 @@
+{"callerContext":{"awsSdkVersion":"aws-sdk-unknown-unknown","clientId":"EXAMPLECLIENTID"},"region":"us-east-1","request":{"clientMetadata":null,"password":"user-password-here","validationData":null},"response":{},"triggerSource":"UserMigration_Authentication","userName":"patient@example.com","userPoolId":"us-east-1_EXAMPLE","version":"1"}

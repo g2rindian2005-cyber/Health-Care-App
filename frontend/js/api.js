@@ -7,7 +7,10 @@ const API_BASE_URL = window.HMS_CONFIG?.apiBase ||
   (() => { try { return localStorage.getItem("hms_api_base"); } catch (e) { return null; } })() ||
   "https://cbtlt9vvfi.execute-api.us-east-1.amazonaws.com/prod";
 
-/** Simple JWT-like token stored in localStorage after login */
+/** Simple JWT-like token stored in localStorage after login.
+    Since the Cognito migration the token is the Cognito ID token
+    (RS256, issued by the user pool); getToken/setToken/clearToken
+    are unchanged, so every page keeps working as before. */
 function getToken() {
   return localStorage.getItem("hms_token") || sessionStorage.getItem("hms_token") || "";
 }
@@ -24,16 +27,69 @@ function clearToken() {
 
 /** Read a claim out of the session JWT (client-side only, for
     routing/display — the server re-verifies the signature). */
-function _tokenPayload() {
+function _tokenPayloadFrom(token) {
   try {
-    const parts = getToken().split(".");
+    const parts = (token || "").split(".");
     if (parts.length !== 3) return {};
     const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
     return JSON.parse(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4)));
   } catch (e) { return {}; }
 }
+function _tokenPayload() {
+  return _tokenPayloadFrom(getToken());
+}
+/** Role from a Cognito token payload: "admin" only when the
+    cognito:groups claim contains "Admins" or the custom:role claim
+    (set by the migration Lambda) is "admin". Anything else —
+    including a token with no groups and no role claim — is a
+    patient. The safe default is patient, never admin. */
+function _roleFromPayload(p) {
+  const groups = p["cognito:groups"] || [];
+  if (groups.indexOf("Admins") !== -1) return "admin";
+  if ((p["custom:role"] || "").toLowerCase() === "admin") return "admin";
+  return "patient";
+}
 function getMyEmail() { return _tokenPayload().email || ""; }
-function getMyRole() { return _tokenPayload().role || "admin"; }
+function getMyRole() { return _roleFromPayload(_tokenPayload()); }
+
+/* ---------------- Cognito (amazon-cognito-identity-js, CDN) -------
+   The SDK is loaded from the CDN on login.html / register.html
+   before this file. The user pool id + client id come from
+   js/config.js (written by Terraform on every apply). Sign-in uses
+   the SDK's default SRP flow — the password is never sent in a
+   form the server could replay. */
+function _cognitoPool() {
+  if (typeof AmazonCognitoIdentity === "undefined") return null;
+  const poolId = window.HMS_CONFIG?.cognitoUserPoolId;
+  const clientId = window.HMS_CONFIG?.cognitoClientId;
+  if (!poolId || !clientId) return null;
+  return new AmazonCognitoIdentity.CognitoUserPool({ UserPoolId: poolId, ClientId: clientId });
+}
+function _cognitoUser(email) {
+  const pool = _cognitoPool();
+  return pool ? new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: pool }) : null;
+}
+/** Refresh the Cognito session when the stored ID token is expired
+    (or about to expire). No network call when the token is still
+    fresh. Returns a Promise of the usable ID token, or "" when
+    there is no session (the caller then sends no token). */
+function _refreshTokenIfNeeded() {
+  const current = getToken();
+  if (!current) return Promise.resolve("");
+  const payload = _tokenPayloadFrom(current);
+  if (payload.exp && payload.exp * 1000 > Date.now() + 300000) return Promise.resolve(current);
+  const pool = _cognitoPool();
+  const user = pool && pool.getCurrentUser();
+  if (!user) return Promise.resolve(current);
+  return new Promise((resolve) => {
+    user.getSession((err, session) => {
+      if (err || !session || !session.isValid()) { clearToken(); resolve(""); return; }
+      const fresh = session.getIdToken().getJwtToken();
+      setToken(fresh, !!localStorage.getItem("hms_token"));
+      resolve(fresh);
+    });
+  });
+}
 
 /** Central request wrapper with auth + error handling */
 async function request(path, options = {}) {
@@ -42,7 +98,7 @@ async function request(path, options = {}) {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
-  const token = getToken();
+  const token = await _refreshTokenIfNeeded();
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
@@ -157,20 +213,72 @@ const PharmacyAPI = {
   lowStock:       ()        => request("/pharmacy/low-stock"),
 };
 
-/* ---------------- AUTH ---------------- */
+/* ---------------- AUTH (AWS Cognito User Pool) ----------------
+   The old /auth/login, /auth/verify-otp and /auth/register routes
+   are retired (the auth Lambda is removed). Sign-up, email
+   verification and sign-in all happen against Cognito directly:
+   the password never touches our own backend. Old users keep
+   working: on their first Cognito sign-in the User Migration
+   trigger checks their existing password in hospital-users and
+   Cognito creates the account for them. */
 const AuthAPI = {
-  // POST /auth/login — returns whatever the auth Lambda returns (e.g. { token, user }).
-  // This method stores nothing itself; the caller decides where to keep the token
-  // (localStorage for "remember me", sessionStorage otherwise).
-  login: (email, password) => request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  // POST /auth/verify-otp — step 2 of login: exchange the emailed code
-  // (plus the challenge token from step 1) for the session JWT.
-  verifyOtp: (challenge, otp) => request("/auth/verify-otp", { method: "POST", body: JSON.stringify({ challenge, otp }) }),
-  // POST /auth/register — create a new user account (name, email,
-  // password). The account signs in through the normal login + OTP
-  // flow afterwards; returns { message, user } or null on error
-  // (the error toast is already shown by request()).
-  register: (name, email, password) => request("/auth/register", { method: "POST", body: JSON.stringify({ name, email, password }) }),
+  // Cognito sign-up: creates the user in the pool; Cognito emails
+  // the verification code. Resolves { userConfirmed, user }.
+  // Rejects with the Cognito error (UsernameExistsException,
+  // InvalidPasswordException, ...).
+  register: (name, email, password) => new Promise((resolve, reject) => {
+    const pool = _cognitoPool();
+    if (!pool) return reject(new Error("Sign-up is not configured yet"));
+    const attrs = [
+      new AmazonCognitoIdentity.CognitoUserAttribute({ Name: "email", Value: email }),
+      new AmazonCognitoIdentity.CognitoUserAttribute({ Name: "name", Value: name }),
+    ];
+    pool.signUp(email, password, attrs, null, (err, result) => {
+      if (err) return reject(err);
+      resolve({ userConfirmed: result.userConfirmed, user: { name, email, role: "patient" } });
+    });
+  }),
+  // Confirm the emailed verification code after sign-up (or for an
+  // unconfirmed user at sign-in). Resolves {} on success.
+  confirmSignUp: (email, code) => new Promise((resolve, reject) => {
+    const user = _cognitoUser(email);
+    if (!user) return reject(new Error("Sign-in is not configured yet"));
+    user.confirmRegistration(code, true, (err) => err ? reject(err) : resolve({}));
+  }),
+  // Ask Cognito to send a fresh verification code.
+  resendCode: (email) => new Promise((resolve, reject) => {
+    const user = _cognitoUser(email);
+    if (!user) return reject(new Error("Sign-in is not configured yet"));
+    user.resendConfirmationCode((err) => err ? reject(err) : resolve({}));
+  }),
+  // Cognito sign-in. Resolves { token, user } with the ID token and
+  // the name/role from its claims. Rejects with the Cognito error —
+  // err.code is UserNotConfirmedException (account needs the emailed
+  // code first), NotAuthorizedException (wrong password),
+  // UserNotFoundException, or TooManyRequestsException.
+  login: (email, password) => new Promise((resolve, reject) => {
+    const user = _cognitoUser(email);
+    if (!user) return reject(new Error("Sign-in is not configured yet"));
+    user.authenticateUser(
+      new AmazonCognitoIdentity.AuthenticationDetails({ Username: email, Password: password }),
+      {
+        onSuccess: (session) => {
+          const token = session.getIdToken().getJwtToken();
+          const payload = _tokenPayloadFrom(token);
+          resolve({ token, user: { name: payload.name || email, email: payload.email || email, role: _roleFromPayload(payload) } });
+        },
+        onFailure: (err) => reject(err),
+        newPasswordRequired: () => reject(new Error("Password change required — contact the hospital administrator.")),
+      }
+    );
+  }),
+  // End the Cognito session and drop the stored token.
+  signOut: () => {
+    const pool = _cognitoPool();
+    const user = pool && pool.getCurrentUser();
+    if (user) { try { user.signOut(); } catch (e) {} }
+    clearToken();
+  },
 };
 
 /* ---------------- Toast helper ----------------

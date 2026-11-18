@@ -1,6 +1,11 @@
 # ============================================================
 # AWS Hospital Management System — Infrastructure as Code
-# Provisions: VPC, DynamoDB tables, 7 Lambdas + db-init, API Gateway, S3, EC2, IAM
+# Provisions: VPC, DynamoDB tables, 6 data Lambdas + db-init +
+# Cognito migration Lambda, Cognito User Pool, API Gateway, S3,
+# EC2, IAM. Auth is AWS Cognito (User Pool): sign-up, email
+# verification and sign-in happen against Cognito directly — there
+# is no auth Lambda any more. Old users keep working through the
+# User Migration trigger (see backend/cognito-migration-lambda).
 # Databases are DynamoDB (PAY_PER_REQUEST) — no RDS instances, no VPC
 # needed for the Lambdas, no SQL to run.
 # ============================================================
@@ -19,10 +24,6 @@ terraform {
     null = {
       source  = "hashicorp/null"
       version = "~> 3.2"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
     }
   }
 }
@@ -103,6 +104,11 @@ locals {
       pk_type = "S"
       gsis    = {}
     }
+    # Kept for the Cognito User Migration trigger: on an old user's
+    # first Cognito sign-in the migration Lambda reads this table to
+    # check their existing PBKDF2 password. Read-only now — nothing
+    # writes new rows here. Once every old user has signed in once
+    # through Cognito, this table can be removed.
     users = {
       name    = "hospital-users"
       pk      = "email"
@@ -123,15 +129,35 @@ locals {
     PRESCRIPTIONS_TABLE = "hospital-prescriptions"
     COUNTERS_TABLE      = "hospital-id-counters"
     USERS_TABLE         = "hospital-users"
-    SMTP_HOST           = var.smtp_host != "" ? var.smtp_host : "email-smtp.${var.aws_region}.amazonaws.com"
-    SMTP_PORT           = var.smtp_port
-    AUTH_USERNAME       = var.auth_admin_username
-    AUTH_EMAIL          = var.ses_from_email
-    AUTH_PASSWORD       = var.auth_admin_password
-    JWT_SECRET          = local.jwt_secret
-    SMTP_USERNAME       = var.smtp_username != "" ? var.smtp_username : var.ses_smtp_username
-    SMTP_PASSWORD       = var.smtp_password != "" ? var.smtp_password : var.ses_smtp_password
-    SMTP_FROM_EMAIL     = var.smtp_from_email != "" ? var.smtp_from_email : var.ses_from_email
+    # Cognito (set from the resources below — the doctor Lambda
+    # verifies tokens against this pool, the migration Lambda reads
+    # it to put users in their group).
+    COGNITO_USER_POOL_ID = aws_cognito_user_pool.hospital.id
+    COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.hospital.id
+    # Built-in admin, for the migration Lambda only: the admin signs
+    # in with the admin EMAIL now (Cognito usernames are emails) and
+    # the same password as before.
+    AUTH_EMAIL    = var.ses_from_email
+    AUTH_PASSWORD = var.auth_admin_password
+    # SMTP values are unused by sign-in since Cognito sends its own
+    # verification emails. Left in place (harmless) so existing
+    # tfvars files keep working.
+    SMTP_HOST       = var.smtp_host != "" ? var.smtp_host : "email-smtp.${var.aws_region}.amazonaws.com"
+    SMTP_PORT       = var.smtp_port
+    SMTP_USERNAME   = var.smtp_username != "" ? var.smtp_username : var.ses_smtp_username
+    SMTP_PASSWORD   = var.smtp_password != "" ? var.smtp_password : var.ses_smtp_password
+    SMTP_FROM_EMAIL = var.smtp_from_email != "" ? var.smtp_from_email : var.ses_from_email
+  }
+  # Env for the Cognito migration Lambda ONLY. It deliberately leaves
+  # out COGNITO_USER_POOL_ID / COGNITO_CLIENT_ID: the user pool's
+  # lambda_config points at this Lambda, so if its env referenced
+  # the pool, Terraform would see a cycle (pool -> Lambda -> pool).
+  # The post-auth handler reads the pool id from the trigger event
+  # (event.userPoolId) instead.
+  migration_env = {
+    USERS_TABLE   = "hospital-users"
+    AUTH_EMAIL    = var.ses_from_email
+    AUTH_PASSWORD = var.auth_admin_password
   }
 }
 
@@ -289,6 +315,13 @@ resource "aws_iam_role_policy" "lambda_extras" {
           [for t in aws_dynamodb_table.hospital : "${t.arn}/index/*"],
         )
       },
+      # Cognito: the migration Lambda puts a freshly signed-in user
+      # in their group (Admins / Patients) via the post-auth trigger.
+      {
+        Effect   = "Allow"
+        Action   = ["cognito-idp:AdminAddUserToGroup"]
+        Resource = aws_cognito_user_pool.hospital.arn
+      },
     ]
   })
 }
@@ -302,10 +335,14 @@ locals {
     { name = "billing", source = "../backend/billing-lambda" },
     { name = "disease", source = "../backend/disease-lambda" },
     { name = "doctor", source = "../backend/doctor-lambda" },
-    { name = "auth", source = "../backend/auth-lambda" },
     { name = "lab", source = "../backend/lab-lambda" },
     { name = "pharmacy", source = "../backend/pharmacy-lambda" },
   ]
+  # NOTE: the auth Lambda is gone — sign-in is AWS Cognito now (see
+  # the Cognito section below). Its old routes /auth/* are removed
+  # from route_map as well. The Cognito migration Lambda is a
+  # separate resource (aws_lambda_function.cognito_migration), not
+  # part of this list: it is not an API Lambda.
 }
 
 # Install deps + zip each lambda directory
@@ -314,19 +351,6 @@ resource "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = local.lambda_services[count.index].source
   output_path = "${path.module}/build/${local.lambda_services[count.index].name}.zip"
-}
-
-# Generated only when var.jwt_secret is empty (e.g. a fresh clone with
-# no tfvars): keeps `terraform plan` prompt-free without committing a
-# real secret to git. The value lives only in Terraform state.
-resource "random_password" "jwt_secret" {
-  count   = var.jwt_secret == "" ? 1 : 0
-  length  = 48
-  special = false
-}
-
-locals {
-  jwt_secret = var.jwt_secret != "" ? var.jwt_secret : random_password.jwt_secret[0].result
 }
 
 # Build the dependency layer zip automatically, so a fresh clone can run
@@ -347,7 +371,9 @@ resource "null_resource" "build_deps_layer" {
 # Shared dependencies layer (cryptography from requirements.txt;
 # boto3 is already in the Lambda Python runtime).
 # archive_file above only zips source code, so without this layer the
-# auth function fails with "No module named 'cryptography'".
+# doctor function fails with "No module named 'cryptography'" — it
+# uses it to verify Cognito JWT signatures (RS256, see
+# backend/doctor-lambda/cognito_auth.py).
 resource "aws_lambda_layer_version" "deps" {
   filename            = "${path.module}/build/deps-layer.zip"
   layer_name          = "${var.project_name}-deps"
@@ -422,6 +448,161 @@ resource "aws_lambda_function" "service" {
 }
 
 # ============================================================
+# AWS Cognito — authentication (replaces the old auth Lambda)
+# Sign-up, email verification and sign-in happen against this user
+# pool directly from the browser (embedded SDK flow, no hosted UI).
+# Old users keep working: the User Migration trigger checks their
+# existing PBKDF2 password in hospital-users on their first
+# Cognito sign-in and Cognito creates the account for them.
+# Role = Cognito group (Admins / Patients), read from the token's
+# cognito:groups claim (custom:role claim as fallback — see the
+# migration Lambda). New sign-ups are patients by default; admins
+# are created by hand (see outputs / the README section on this).
+# ============================================================
+resource "aws_cognito_user_pool" "hospital" {
+  name                     = "${var.project_name}-user-pool"
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+  mfa_configuration        = "OFF"
+
+  admin_create_user_config {
+    allow_admin_create_user_only = false
+  }
+
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
+    }
+  }
+
+  # Same rule the old register page enforced: at least 6 characters,
+  # no complexity requirements — Cognito defaults would demand 8+
+  # with upper/lower/number/symbol.
+  password_policy {
+    minimum_length                   = 6
+    require_lowercase                = false
+    require_numbers                  = false
+    require_symbols                  = false
+    require_uppercase                = false
+    temporary_password_validity_days = 7
+  }
+
+  # Standard attributes. The string constraints stop Terraform from
+  # planning a perpetual diff on these blocks.
+  schema {
+    name                = "email"
+    attribute_data_type = "String"
+    required            = true
+    mutable             = true
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 2048
+    }
+  }
+  schema {
+    name                = "name"
+    attribute_data_type = "String"
+    required            = true
+    mutable             = true
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 100
+    }
+  }
+  # Custom attribute, set by the migration Lambda for migrated users
+  # (and read by the frontend + doctor Lambda as a fallback role).
+  # Custom attribute names carry the "custom:" prefix in Terraform.
+  schema {
+    name                = "custom:role"
+    attribute_data_type = "String"
+    required            = false
+    mutable             = true
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 20
+    }
+  }
+
+  lambda_config {
+    user_migration      = aws_lambda_function.cognito_migration.arn
+    post_authentication = aws_lambda_function.cognito_migration.arn
+  }
+
+  tags = local.tags
+}
+
+resource "aws_cognito_user_group" "admins" {
+  name         = "Admins"
+  user_pool_id = aws_cognito_user_pool.hospital.id
+  description  = "Hospital administrators — full dashboard access"
+  precedence   = 1
+}
+
+resource "aws_cognito_user_group" "patients" {
+  name         = "Patients"
+  user_pool_id = aws_cognito_user_pool.hospital.id
+  description  = "Registered patients — own panel and appointments only"
+  precedence   = 2
+}
+
+resource "aws_cognito_user_pool_client" "hospital" {
+  name                          = "${var.project_name}-client"
+  user_pool_id                  = aws_cognito_user_pool.hospital.id
+  generate_secret               = false
+  explicit_auth_flows           = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_PASSWORD_AUTH"]
+  prevent_user_existence_errors = "ENABLED"
+  supported_identity_providers  = ["COGNITO"]
+  # ID tokens last 8h, like the old session JWTs; the SDK refreshes
+  # them automatically with the 30-day refresh token.
+  access_token_validity  = 1
+  id_token_validity      = 8
+  refresh_token_validity = 30
+  token_validity_units {
+    access_token  = "hours"
+    id_token      = "hours"
+    refresh_token = "days"
+  }
+}
+
+# Cognito migration Lambda — User Migration + Post Authentication
+# triggers (backend/cognito-migration-lambda). It is NOT an API
+# Lambda: it has its own zip + function resource and is not in
+# local.lambda_services. Its env (local.migration_env) deliberately
+# leaves out the pool id — the pool's lambda_config points here, so
+# an env reference to the pool would be a Terraform cycle.
+resource "archive_file" "cognito_migration_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../backend/cognito-migration-lambda"
+  output_path = "${path.module}/build/cognito-migration.zip"
+  excludes    = ["__pycache__", "*.pyc"]
+}
+
+resource "aws_lambda_function" "cognito_migration" {
+  function_name    = "${var.project_name}-cognito-migration-service"
+  runtime          = "python3.11"
+  handler          = "lambda_function.lambda_handler"
+  role             = aws_iam_role.lambda.arn
+  filename         = archive_file.cognito_migration_zip.output_path
+  source_code_hash = archive_file.cognito_migration_zip.output_base64sha256
+  memory_size      = var.lambda_memory
+  timeout          = var.lambda_timeout
+
+  environment {
+    variables = local.migration_env
+  }
+  tags = local.tags
+}
+
+resource "aws_lambda_permission" "cognito_migration" {
+  statement_id  = "AllowCognitoInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cognito_migration.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.hospital.arn
+}
+
+# ============================================================
 # API Gateway — REST API with per-base-path proxy routes
 # Each base path (patients, bills, payments, dues, diseases,
 # doctors, assignments) gets its own resource + {proxy+} child,
@@ -436,9 +617,10 @@ locals {
     diseases    = 2 # -> disease-lambda
     doctors     = 3 # -> doctor-lambda
     assignments = 3 # -> doctor-lambda
-    auth        = 4 # -> auth-lambda
-    lab         = 5 # -> lab-lambda
-    pharmacy    = 6 # -> pharmacy-lambda
+    lab         = 4 # -> lab-lambda
+    pharmacy    = 5 # -> pharmacy-lambda
+    # NOTE: no auth route any more — /auth/login, /auth/verify-otp
+    # and /auth/register are retired; Cognito handles sign-in.
   }
 }
 
@@ -691,12 +873,15 @@ resource "aws_s3_bucket_policy" "frontend_public_read" {
 # changed URL forces an update). Note: CloudFront may keep serving
 # a cached copy for up to an hour after a change — invalidate /*
 # once if the new URL must take effect immediately.
+# The file also carries the Cognito pool id + client id, so the
+# login/register pages can sign in against this deployment's user
+# pool without any manual step.
 resource "aws_s3_object" "frontend_config_js" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "js/config.js"
-  content      = "window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\" };\n"
+  content      = "window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\", cognitoUserPoolId: \"${aws_cognito_user_pool.hospital.id}\", cognitoClientId: \"${aws_cognito_user_pool_client.hospital.id}\" };\n"
   content_type = "application/javascript"
-  etag         = md5("window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\" };\n")
+  etag         = md5("window.HMS_CONFIG = { apiBase: \"${aws_api_gateway_stage.prod.invoke_url}\", cognitoUserPoolId: \"${aws_cognito_user_pool.hospital.id}\", cognitoClientId: \"${aws_cognito_user_pool_client.hospital.id}\" };\n")
 
   depends_on = [aws_s3_bucket_policy.frontend_public_read]
 }

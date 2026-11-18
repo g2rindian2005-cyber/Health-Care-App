@@ -34,6 +34,16 @@ output "lambda_function_names" {
   value       = aws_lambda_function.service[*].function_name
 }
 
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool id — sign-in for the whole app runs against this pool"
+  value       = aws_cognito_user_pool.hospital.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito User Pool client id (browser sign-in)"
+  value       = aws_cognito_user_pool_client.hospital.id
+}
+
 output "configuration_reminder" {
   description = "Next steps to wire the app to the infra"
   value       = <<EOF
@@ -44,19 +54,33 @@ output "configuration_reminder" {
      bills, 12 lab tests, 12 medicines, ...) into the DynamoDB
      tables. No SQL, no EC2, no manual step. Re-running it is safe.
 
-  2. API URL is wired automatically:
+  2. API URL + Cognito ids are wired automatically:
      Terraform writes js/config.js to S3 on every apply with the
-     live API URL (see aws_s3_object.frontend_config_js), so the
-     site connects without any manual step. If the API URL ever
+     live API URL and the Cognito user pool + client ids (see
+     aws_s3_object.frontend_config_js), so the site connects and
+     signs in without any manual step. If the API URL ever
      changes, invalidate the CloudFront cache (/*) or wait up to
      an hour for the cached copy to expire.
 
   3. Upload frontend to S3:
      aws s3 sync frontend/ s3://${aws_s3_bucket.frontend.id}/
 
-  4. SES: verify your sender email + request production access.
+  4. Old users keep working — no re-registration:
+     on their first Cognito sign-in the migration Lambda checks
+     their existing password in the hospital-users table and
+     Cognito creates the account for them, same password.
 
-  5. Open: http://${aws_s3_bucket.frontend.id}.s3-website.${var.aws_region}.amazonaws.com
+  5. Admin sign-in (no more username "admin"):
+     the admin signs in with the admin EMAIL (${var.ses_from_email})
+     and the auth_admin_password, and lands in the Admins group.
+     Nothing to create: the first sign-in migrates the admin
+     automatically. To make a second admin, create the user in
+     the Cognito console and add them to the Admins group.
+
+  6. SES is no longer needed for login: Cognito sends the
+     verification emails itself.
+
+  7. Open: http://${aws_s3_bucket.frontend.id}.s3-website.${var.aws_region}.amazonaws.com
      
   ─────────────────────────────────────────────
 EOF

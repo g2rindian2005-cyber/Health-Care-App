@@ -144,7 +144,7 @@
         Don't have an account? <a href="register.html" style="color:#60a5fa; font-weight:600;">Create one →</a>
       </p>
       <p id="adminNote" style="display:none; text-align:center; margin-top:20px; font-size:13px; color:#9ca3af;">
-        Admin accounts are created by the hospital.
+        Admin accounts are created by the hospital — sign in with your admin email.
       </p>
 
       <p style="text-align:center; margin-top:20px; font-size:12px; color:#9ca3af;">
@@ -159,13 +159,19 @@
 
 <script src="js/ui.js"></script>
 <script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.22/dist/amazon-cognito-identity.min.js"></script>
 <script src="js/api.js"></script>
 <script>
-  /* ══ JWT login — simple ════════════════════════════════════
-     1. Send the username + password to POST /auth/login.
-     2. The auth Lambda checks them and returns a signed JWT.
-     3. Save the JWT and open the dashboard.
-     That is the only way in — no demo or local shortcut. */
+  /* ══ Cognito sign-in ═════════════════════════════════════════
+     1. Send the email + password to Cognito (AuthAPI.login).
+     2. Cognito returns an ID token; its claims carry the name and
+        the role (cognito:groups / custom:role).
+     3. Save the token and open the side the role points to.
+     Old users keep working: on their first Cognito sign-in the
+     User Migration trigger checks their existing password in the
+     hospital-users table and Cognito creates the account for them.
+     Step 2 below is only for accounts whose email is not confirmed
+     yet — it takes the code Cognito emailed at sign-up. */
 
   const EYE_ON  = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
   const EYE_OFF = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/>';
@@ -190,8 +196,10 @@
     document.getElementById('loginBtnIcon').innerHTML = on ? SPINNER : ARROW;
   }
 
-  /* The login itself — two steps: password, then emailed OTP */
-  let step = 1, challenge = null, savedU = '', savedP = '';
+  /* The login itself — step 1: Cognito sign-in. Step 2 (only when
+     Cognito says the email is not confirmed yet): the code Cognito
+     emailed at sign-up, then sign in again. */
+  let step = 1, savedU = '', savedP = '';
 
   function setStepUI() {
     document.getElementById('step1').style.display = step === 1 ? 'block' : 'none';
@@ -215,7 +223,7 @@
   function applyRoleUI() {
     document.getElementById('rolePatientBtn').classList.toggle('active', selectedRole === 'patient');
     document.getElementById('roleAdminBtn').classList.toggle('active', selectedRole === 'admin');
-    document.getElementById('username').placeholder = selectedRole === 'admin' ? 'admin' : 'you@example.com';
+    document.getElementById('username').placeholder = selectedRole === 'admin' ? 'your admin email' : 'you@example.com';
     document.getElementById('registerRow').style.display = selectedRole === 'admin' ? 'none' : 'block';
     document.getElementById('adminNote').style.display = selectedRole === 'admin' ? 'block' : 'none';
     if (step === 1) {
@@ -249,24 +257,36 @@
     setTimeout(() => { window.location.href = actualRole === 'patient' ? 'patient/my-appointments.html' : 'dashboard.html'; }, delay);
   }
 
-  async function requestOtp(u, p) {
-    const data = await AuthAPI.login(u, p);                // POST /auth/login
-    if (data && data.token) { finishLogin(data.token, data.user && data.user.name, data.user && data.user.role); return; }
-    if (!data || !data.otp_required) throw new Error('Login failed');
-    challenge = data.challenge;
-    step = 2;
-    setStepUI();
-    document.getElementById('otpHint').textContent = data.email_hint
-      ? `Code sent to ${data.email_hint} · expires in 5 minutes`
-      : 'Your code expires in 5 minutes';
-    const demo = document.getElementById('otpDemo');
-    if (data.dev_otp) {
-      demo.style.display = 'block';
-      demo.innerHTML = 'Email delivery is not active yet — your code is: <strong style="font-size:16px; letter-spacing:3px;">' + data.dev_otp + '</strong>';
-    } else {
-      demo.style.display = 'none';
+  /* Step 1: Cognito sign-in. An unconfirmed account is sent to
+     step 2 for the emailed confirmation code. */
+  async function requestSignIn(u, p) {
+    try {
+      const data = await AuthAPI.login(u, p);
+      finishLogin(data.token, data.user && data.user.name, data.user && data.user.role);
+    } catch (err) {
+      if (err && err.code === 'UserNotConfirmedException') {
+        step = 2;
+        setStepUI();
+        document.getElementById('otpHint').textContent = 'Your email is not confirmed yet — enter the 6-digit code Cognito sent you';
+        document.getElementById('otpCode').focus();
+        return;
+      }
+      throw err;
     }
-    document.getElementById('otpCode').focus();
+  }
+
+  function loginErrorMessage(err) {
+    const code = err && err.code;
+    if (code === 'NotAuthorizedException' || code === 'UserNotFoundException') {
+      return 'Invalid username or password. Please try again.';
+    }
+    if (code === 'TooManyRequestsException' || code === 'LimitExceededException') {
+      return 'Too many attempts. Please try again in a few minutes.';
+    }
+    if (code === 'UserNotConfirmedException') {
+      return 'Your email is not confirmed yet — enter the code we sent you.';
+    }
+    return (err && err.message) || 'Sign-in failed. Please try again.';
   }
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -278,8 +298,8 @@
       if (otp.length !== 6) return;
       setLoading(true);
       try {
-        const data = await AuthAPI.verifyOtp(challenge, otp);   // POST /auth/verify-otp -> { token }
-        if (!data || !data.token) throw new Error('Bad code');
+        await AuthAPI.confirmSignUp(savedU, otp);
+        const data = await AuthAPI.login(savedU, savedP);
         finishLogin(data.token, data.user && data.user.name, data.user && data.user.role);
       } catch (err) {
         setLoading(false);
@@ -297,19 +317,19 @@
     setLoading(true);
     try {
       savedU = u; savedP = p;
-      await requestOtp(u, p);
+      await requestSignIn(u, p);
       setLoading(false);
     } catch (err) {
       setLoading(false);
-      showToast('Invalid username or password. Please try again.', 'error', 'Authentication Failed');
+      showToast(loginErrorMessage(err), 'error', 'Authentication Failed');
     }
   });
 
-  /* Resend a fresh code / go back to step 1 */
+  /* Resend the confirmation code / go back to step 1 */
   document.getElementById('otpResend').addEventListener('click', async (e) => {
     e.preventDefault();
     try {
-      await requestOtp(savedU, savedP);
+      await AuthAPI.resendCode(savedU);
       showToast('A new code was sent.', 'success', 'Code Resent');
     } catch (err) {
       showToast('Could not resend the code. Please sign in again.', 'error', 'Resend Failed');
@@ -317,7 +337,7 @@
   });
   document.getElementById('otpBack').addEventListener('click', (e) => {
     e.preventDefault();
-    step = 1; challenge = null;
+    step = 1;
     setStepUI();
   });
 

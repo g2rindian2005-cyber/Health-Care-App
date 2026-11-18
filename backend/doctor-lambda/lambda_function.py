@@ -21,12 +21,12 @@ DynamoDB migration: the old code read MySQL on RDS via db_connection.
 All reads/writes now go through dynamodb.py (boto3). Routes,
 validations, messages and response shapes are unchanged.
 """
-import base64
-import hashlib
-import hmac
 import json
-import time
+
 from botocore.exceptions import ClientError
+
+from cognito_auth import role_from_payload
+from cognito_auth import verify_token as _verify_token
 
 from dynamodb import (
     get_item, scan_all, query_index, put_item, update_item, delete_item,
@@ -37,11 +37,12 @@ from dynamodb import (
 import sys
 import os
 
-# JWT_SECRET comes from Terraform common_env — the same value the auth
-# Lambda signs session tokens with. When it is not configured on this
-# Lambda, the ownership check below is skipped, so deployments that
-# predate the patient panel keep working exactly as before.
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+# Token verification is Cognito now (see cognito_auth.py): the doctor
+# Lambda is the only data Lambda that checks the caller's token, and
+# it verifies the RS256 signature against the user pool JWKS, plus
+# iss / token_use / aud / exp. The pool id and client id come from
+# Terraform common_env on every apply. A missing or invalid token
+# fails closed (401) — there is no legacy bypass any more.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "email"))
 try:
     from send_email import send_appointment_email  # noqa: E402
@@ -71,44 +72,24 @@ def _json(status, payload):
     }
 
 
-def _verify_token(token: str):
-    """Return the JWT payload dict if signature and expiry are valid."""
-    try:
-        head, body, sig = token.split(".")
-        expected = hmac.new(
-            JWT_SECRET.encode(), f"{head}.{body}".encode(), hashlib.sha256
-        ).digest()
-        given = base64.urlsafe_b64decode(sig + "=" * (-len(sig) % 4))
-        if not hmac.compare_digest(expected, given):
-            return None
-        payload = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
-        if int(payload.get("exp", 0)) < int(time.time()):
-            return None
-        return payload
-    except Exception:
-        return None
-
-
 def _assignment_auth(event, patient):
     """Ownership check for assignment reads/writes.
 
     Returns None when the caller may proceed, else an error response
     (a _json dict) the route should return directly.
     Admins may touch any patient; a patient may only touch the
-    patient record whose email matches their JWT email. Admin
-    behaviour is unchanged: a missing patient record is left to the
-    route's own handling, and calls without JWT_SECRET configured
-    skip the check entirely.
+    patient record whose email matches their Cognito token email.
+    Admin behaviour is unchanged: a missing patient record is left
+    to the route's own handling. The token is verified by
+    cognito_auth (RS256/JWKS); a missing or invalid token is a 401.
     """
-    if not JWT_SECRET:
-        return None
     headers = event.get("headers") or {}
     auth = headers.get("Authorization") or headers.get("authorization") or ""
     token = auth[7:] if auth.startswith("Bearer ") else ""
     payload = _verify_token(token) if token else None
     if not payload:
         return _json(401, {"error": "Please sign in again"})
-    if (payload.get("role") or "admin") == "admin":
+    if role_from_payload(payload) == "admin":
         return None
     if not patient:
         return _json(404, {"error": "Patient not found"})

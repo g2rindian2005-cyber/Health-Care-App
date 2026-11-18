@@ -66,7 +66,7 @@
       </div>
 
       <h2>Create your account</h2>
-      <p class="login-subtitle">Set up your hospital administrator account</p>
+      <p class="login-subtitle">Create your patient account — sign in to book appointments</p>
 
       <form id="registerForm" novalidate>
         <div class="form-group">
@@ -119,6 +119,27 @@
         </button>
       </form>
 
+      <div id="confirmStep" style="display:none">
+        <p style="font-size:14px; color:#cbd5e1; margin:0 0 16px;">
+          We emailed a 6-digit confirmation code to <strong id="confirmEmailText" style="color:#ffffff;"></strong>.
+          Enter it below to activate your account.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="regCode">Confirmation Code</label>
+          <input type="text" id="regCode" class="form-control" placeholder="••••••"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 style="text-align:center; font-size:22px; letter-spacing:10px; font-weight:700;">
+          <span class="form-error" id="regCodeError">Please enter the 6-digit code.</span>
+        </div>
+        <button type="button" class="btn-login" id="confirmBtn">
+          <span id="confirmBtnText">Verify &amp; Activate</span>
+        </button>
+        <div class="login-options" style="margin-top:14px;">
+          <a href="#" class="forgot-link" id="regBack">← Back</a>
+          <a href="#" class="forgot-link" id="regResend">Resend code</a>
+        </div>
+      </div>
+
       <p style="text-align:center; margin-top:20px; font-size:13px; color:#9ca3af;">
         Already have an account? <a href="login.html" style="color:#60a5fa; font-weight:600;">Sign in →</a>
       </p>
@@ -135,14 +156,16 @@
 
 <script src="js/ui.js"></script>
 <script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.22/dist/amazon-cognito-identity.min.js"></script>
 <script src="js/api.js"></script>
 <script>
-  /* ══ Create account — simple ════════════════════════════════
-     1. Send name + email + password to POST /auth/register.
-     2. The auth Lambda stores the account (hashed password) in the
-        hospital-users table and returns { message, user }.
-     3. The new user then signs in on login.html with email +
-        password, then the emailed OTP — same as the admin. */
+  /* ══ Create account (Cognito) ══════════════════════════════
+     1. Cognito sign-up with name + email + password. Cognito
+        emails a 6-digit confirmation code.
+     2. Enter the code here to confirm the account.
+     3. Sign in on login.html. New accounts are patients — they land
+        on the patient panel. Admin accounts are created by the
+        hospital (see the README / Terraform outputs). */
 
   const EYE_ON  = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
   const EYE_OFF = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/>';
@@ -170,6 +193,30 @@
     document.getElementById('registerBtnIcon').innerHTML = on ? SPINNER : ARROW;
   }
 
+  let savedEmail = '';
+
+  function registerErrorMessage(err) {
+    const code = err && err.code;
+    if (code === 'UsernameExistsException') {
+      return 'An account with this email already exists. Try signing in instead.';
+    }
+    if (code === 'InvalidPasswordException') {
+      return 'Password must be at least 6 characters.';
+    }
+    if (code === 'InvalidParameterException' || code === 'InvalidEmailRoleAccessPolicyException') {
+      return 'Please check the details and try again.';
+    }
+    return (err && err.message) || 'Could not create the account. Please try again.';
+  }
+
+  function showConfirmStep(email) {
+    savedEmail = email;
+    document.getElementById('confirmEmailText').textContent = email;
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('confirmStep').style.display = 'block';
+    document.getElementById('regCode').focus();
+  }
+
   document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('regName').value.trim();
@@ -188,11 +235,53 @@
     if (badName || badEmail || badPw || badConfirm) return;
 
     setLoading(true);
-    const data = await AuthAPI.register(name, email, pw);   // POST /auth/register
-    setLoading(false);
-    if (!data || !data.user) return;   // error toast already shown by request()
-    showToast('Account created — sign in with your email and password.', 'success', 'Welcome!');
-    setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+    try {
+      const data = await AuthAPI.register(name, email, pw);
+      setLoading(false);
+      if (data.userConfirmed) {
+        showToast('Account created — sign in with your email and password.', 'success', 'Welcome!');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+      } else {
+        showConfirmStep(email);
+      }
+    } catch (err) {
+      setLoading(false);
+      showToast(registerErrorMessage(err), 'error', 'Registration Failed');
+    }
+  });
+
+  /* Confirm the emailed code, then go to sign-in. */
+  document.getElementById('confirmBtn').addEventListener('click', async () => {
+    const code = document.getElementById('regCode').value.trim();
+    document.getElementById('regCode').classList.toggle('is-invalid', code.length !== 6);
+    if (code.length !== 6) return;
+    const cbtn = document.getElementById('confirmBtn');
+    cbtn.disabled = true;
+    document.getElementById('confirmBtnText').textContent = 'Please wait\u2026';
+    try {
+      await AuthAPI.confirmSignUp(savedEmail, code);
+      showToast('Email confirmed — sign in with your email and password.', 'success', 'Welcome!');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+    } catch (err) {
+      cbtn.disabled = false;
+      document.getElementById('confirmBtnText').textContent = 'Verify & Activate';
+      showToast('Invalid or expired code. Please try again.', 'error', 'Verification Failed');
+    }
+  });
+
+  document.getElementById('regResend').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await AuthAPI.resendCode(savedEmail);
+      showToast('A new code was sent.', 'success', 'Code Resent');
+    } catch (err) {
+      showToast('Could not resend the code. Please try again.', 'error', 'Resend Failed');
+    }
+  });
+  document.getElementById('regBack').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('confirmStep').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
   });
 
   /* Clear the red error border while typing */

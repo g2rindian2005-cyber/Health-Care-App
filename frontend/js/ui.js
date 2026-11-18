@@ -430,8 +430,10 @@ function initApp(opts = {}) {
     return;
   }
 
-  /* Role guard: patients stay in the patient panel, admins in the admin app */
-  const _role = localStorage.getItem('hms_role') || sessionStorage.getItem('hms_role') || 'admin';
+  /* Role guard: patients stay in the patient panel, admins in the admin app.
+     No role stored yet (e.g. an old session) means patient — the safe
+     default is patient, never admin. */
+  const _role = localStorage.getItem('hms_role') || sessionStorage.getItem('hms_role') || 'patient';
   const _inPatientArea = window.location.pathname.includes('/patient/');
   if (_role === 'patient' && !_inPatientArea) {
     window.location.href = resolveRoot('patient/my-appointments.html');
@@ -486,8 +488,11 @@ function initApp(opts = {}) {
   const av = document.getElementById('sidebarUserAvatar');
   if (av) av.textContent = u[0].toUpperCase();
 
-  /* Logout */
+  /* Logout: end the Cognito session too, then drop the local copy. */
   document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    if (typeof AuthAPI !== 'undefined' && AuthAPI.signOut) {
+      try { AuthAPI.signOut(); } catch (e) {}
+    }
     localStorage.removeItem('hms_token');
     localStorage.removeItem('hms_user');
     localStorage.removeItem('hms_role');
