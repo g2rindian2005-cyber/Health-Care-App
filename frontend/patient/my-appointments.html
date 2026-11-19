@@ -6,8 +6,18 @@
   <title>My Appointments — HealtheCare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+  </style>
 </head>
-<body>
+<body class="dash-blue">
 <div class="app-layout">
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main-content">
@@ -28,7 +38,7 @@
       <div class="card" id="noProfileCard" style="display:none;">
         <div class="card-body" style="text-align:center; padding:36px 20px;">
           <h3 style="margin-bottom:8px;">Complete your profile first</h3>
-          <p style="font-size:13.5px; color:var(--gray-500); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then you can book appointments.</p>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then you can book appointments.</p>
           <a href="my-profile.html" class="btn btn-primary">Complete My Profile</a>
         </div>
       </div>

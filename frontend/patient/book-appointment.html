@@ -8,15 +8,22 @@
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
     .pay-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .pay-method { display:flex; align-items:center; gap:8px; border:1.5px solid var(--gray-200); border-radius:10px; padding:10px 12px; cursor:pointer; font-size:13px; font-weight:600; color:var(--gray-600); }
+    .pay-method { display:flex; align-items:center; gap:8px; border:1.5px solid rgba(147,197,253,.35); border-radius:10px; padding:10px 12px; cursor:pointer; font-size:13px; font-weight:600; color:#dbeafe; background:transparent; }
     .pay-method:hover { border-color:var(--blue-400); }
-    .pay-method:has(input:checked) { border-color:var(--blue-600); background:var(--blue-50); color:var(--blue-700); }
+    .pay-method:has(input:checked) { border-color:var(--blue-400); background:rgba(37,99,235,.30); color:#fff; }
     .pay-method input { accent-color:var(--blue-600); }
-    .pay-note { font-size:12px; color:var(--gray-400); margin-top:10px; line-height:1.6; }
+    .pay-note { font-size:12px; color:rgba(219,234,254,.70); margin-top:10px; line-height:1.6; }
     @media (max-width: 640px) { .pay-methods { grid-template-columns:repeat(2,1fr); } }
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .form-label { color:#dbeafe; }
+    .form-section-title { color:rgba(219,234,254,.75); }
   </style>
 </head>
-<body>
+<body class="dash-blue">
 <div class="app-layout">
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main-content">
@@ -84,14 +91,14 @@
                 <p class="pay-note">Consultation fee ka bill ban jayega — payment clinic pe apne chosen method se hogi.</p>
                 <div id="upiPayBox" style="display:none; margin-top:14px; border:1.5px dashed var(--blue-300); border-radius:12px; padding:16px; text-align:center;">
                   <p style="font-size:13px; font-weight:700; margin-bottom:4px;">UPI se pay karo</p>
-                  <p style="font-size:12.5px; color:var(--gray-500); margin-bottom:12px;">Neeche QR scan karo aur <b id="upiFeeText">—</b> pay karo, phir transaction ID daalo.</p>
+                  <p style="font-size:12.5px; color:rgba(219,234,254,.78); margin-bottom:12px;">Neeche QR scan karo aur <b id="upiFeeText">—</b> pay karo, phir transaction ID daalo.</p>
                   <img data-upi-qr alt="UPI QR code" style="width:180px; height:180px; object-fit:contain; border-radius:10px; background:#fff;">
                   <div class="form-group" style="text-align:left; margin-top:14px;">
                     <label class="form-label">UPI Transaction ID (UTR) <span class="required">*</span></label>
                     <input type="text" class="form-control" id="upiTxnId" placeholder="12-digit number, e.g. 123456789012" maxlength="12" inputmode="numeric">
                     <span class="form-error">12-digit Transaction ID daalo.</span>
                   </div>
-                  <p style="font-size:12px; color:var(--gray-400); margin-top:8px; line-height:1.6;">UPI se pay karna hai to pehle QR scan karo, phir 12-digit transaction ID daalo. Abhi pay nahi karna to "Pay at Clinic" chuno.</p>
+                  <p style="font-size:12px; color:rgba(219,234,254,.65); margin-top:8px; line-height:1.6;">UPI se pay karna hai to pehle QR scan karo, phir 12-digit transaction ID daalo. Abhi pay nahi karna to "Pay at Clinic" chuno.</p>
                 </div>
               </div>
             </form>
@@ -107,7 +114,7 @@
           <div class="card">
             <div class="card-header"><div class="card-header-left"><h3>How it works</h3></div></div>
             <div class="card-body">
-              <ul style="font-size:12.5px; color:var(--gray-500); line-height:1.9; padding-left:16px; list-style:disc;">
+              <ul style="font-size:12.5px; color:rgba(219,234,254,.78); line-height:1.9; padding-left:16px; list-style:disc;">
                 <li>Pick a doctor, date and time</li>
                 <li>Choose a payment method — fee ka bill ban jayega</li>
                 <li>Confirm your booking — phir QR code milega</li>
@@ -119,8 +126,8 @@
           <div class="card">
             <div class="card-header"><div class="card-header-left"><h3>Your consultation fee</h3></div></div>
             <div class="card-body" style="text-align:center; padding:24px;">
-              <div style="font-size:28px; font-weight:800; color:var(--blue-600);" id="feePreview">—</div>
-              <p style="font-size:12px; color:var(--gray-400); margin-top:6px;">Fee of the selected doctor</p>
+              <div style="font-size:28px; font-weight:800; color:#93c5fd;" id="feePreview">—</div>
+              <p style="font-size:12px; color:rgba(219,234,254,.65); margin-top:6px;">Fee of the selected doctor</p>
             </div>
           </div>
         </div>
