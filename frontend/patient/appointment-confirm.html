@@ -82,6 +82,19 @@
           </div>
         </div>
 
+        <!-- Pay later via UPI (only when method is UPI and not paid yet) -->
+        <div id="upiPayLater" style="display:none; padding: 6px 22px 18px; text-align:center;">
+          <p style="font-size:13px; color:var(--gray-500); line-height:1.7; margin-bottom:12px;">
+            Abhi tak payment nahi hui — QR scan karke <b id="upiLaterFee">—</b> pay karo, phir transaction ID daalo.
+          </p>
+          <img data-upi-qr alt="UPI QR code" style="width:160px; height:160px; object-fit:contain; border-radius:10px; background:#fff; margin-bottom:12px;">
+          <div class="form-group" style="text-align:left;">
+            <label class="form-label">UPI Transaction ID</label>
+            <input type="text" class="form-control" id="upiLaterTxnId" placeholder="e.g. 123456789012">
+          </div>
+          <button class="btn btn-primary" id="recordPayBtn" onclick="recordUpiPayment()" style="margin-top:12px;">I Paid — Record Payment</button>
+        </div>
+
         <div class="card-footer" style="justify-content:center; gap:10px; flex-wrap:wrap;">
           <button type="button" class="btn btn-outline btn-sm" id="downloadQrBtn" onclick="downloadQR()" style="display:none;">Download QR</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print</button>
@@ -96,21 +109,28 @@
 <script src="../js/ui.js"></script>
 <script src="../js/config.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/upi-qr.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
   initApp({ page: 'appointment-confirm', title: 'Appointment Confirmation', subtitle: 'My Care' });
 
-  let asgId = null, asg = null, doctor = null, patient = null, qrText = '';
+  if (typeof UPI_QR_DATA_URL !== 'undefined') {
+    document.querySelectorAll('img[data-upi-qr]').forEach(im => { im.src = UPI_QR_DATA_URL; });
+  }
+
+  let asgId = null, billId = null, asg = null, doctor = null, patient = null, qrText = '';
 
   function parsePayment(notes) {
-    const out = { method: '—', fee: '—', reason: '' };
+    const out = { method: '—', fee: '—', feeNum: 0, txn: '', reason: '' };
     if (!notes) return out;
     const lines = String(notes).split('\n');
     const payLine = lines.find(l => l.trim().startsWith('Payment:')) || '';
     const m = payLine.match(/Payment:\s*([^|]+)/);
-    const f = payLine.match(/Fee:\s*([^\n]+)/);
+    const f = payLine.match(/Fee:\s*([^|\n]+)/);
+    const t = payLine.match(/Txn:\s*([^|\n]+)/);
     if (m) out.method = m[1].trim();
-    if (f) out.fee = f[1].trim();
+    if (f) { out.fee = f[1].trim(); out.feeNum = parseFloat(out.fee.replace(/[^0-9.]/g, '')) || 0; }
+    if (t) out.txn = t[1].trim();
     out.reason = lines.filter(l => !l.trim().startsWith('Payment:')).join('\n').trim();
     return out;
   }
@@ -119,7 +139,9 @@
   function hide(el) { document.getElementById(el).style.display = 'none'; }
 
   async function init() {
-    asgId = new URLSearchParams(window.location.search).get('assignment_id');
+    const qs = new URLSearchParams(window.location.search);
+    asgId = qs.get('assignment_id');
+    billId = qs.get('bill_id');
     if (!asgId) { hide('loadingCard'); show('errorCard'); return; }
 
     const res = await DoctorsAPI.assignment(asgId);
@@ -155,12 +177,17 @@
       ['Room', asg.room_number || '—'],
       ['Consultation Fee', pay.fee],
       ['Payment Method', pay.method],
-      ['Payment Status', 'Pending — clinic pe hogi'],
+      ['Payment Status', pay.txn ? `Paid via UPI (Txn: ${pay.txn})` : 'Pending — clinic pe hogi'],
       ['Status', asg.status],
     ];
     if (pay.reason) rows.push(['Reason', pay.reason]);
     document.getElementById('ticketRows').innerHTML = rows.map(([k, v]) =>
       `<div class="ticket-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+    // UPI pay-later: method UPI, not paid yet, and we know the bill
+    const showUpiLater = pay.method === 'UPI' && !pay.txn && billId;
+    document.getElementById('upiPayLater').style.display = showUpiLater ? 'block' : 'none';
+    if (showUpiLater) document.getElementById('upiLaterFee').textContent = pay.fee;
 
     qrText = [
       'HealtheCare Appointment',
@@ -210,6 +237,35 @@
       renderTicket();
     } else {
       btn.textContent = 'Confirm Appointment'; btn.disabled = false;
+    }
+  }
+
+  async function recordUpiPayment() {
+    const txn = document.getElementById('upiLaterTxnId').value.trim();
+    if (!txn) { showToast('Transaction ID daalo.', 'warning'); return; }
+    const btn = document.getElementById('recordPayBtn');
+    btn.textContent = 'Recording…'; btn.disabled = true;
+    const pay = parsePayment(asg.notes);
+    const res = await BillingAPI.recordPayment({
+      bill_id: parseInt(billId, 10),
+      patient_id: asg.patient_id,
+      amount_paid: pay.feeNum,
+      payment_method: 'UPI',
+      transaction_id: txn,
+    });
+    if (res) {
+      // Persist the txn ID in the assignment notes so it shows as Paid
+      let newNotes = asg.notes || '';
+      const payLine = newNotes.split('\n').find(l => l.trim().startsWith('Payment:')) || '';
+      if (payLine && !payLine.includes('Txn:')) {
+        newNotes = newNotes.replace(payLine, payLine + ` | Txn: ${txn}`);
+        await DoctorsAPI.updateAssign(asgId, { notes: newNotes });
+        asg.notes = newNotes;
+      }
+      showToast('Payment recorded. Hospital verify karega.', 'success', 'Paid');
+      renderTicket();
+    } else {
+      btn.textContent = 'I Paid — Record Payment'; btn.disabled = false;
     }
   }
 

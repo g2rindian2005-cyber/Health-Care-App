@@ -82,6 +82,16 @@
                   <label class="pay-method"><input type="radio" name="payMethod" value="Pay at Clinic" checked> Pay at Clinic</label>
                 </div>
                 <p class="pay-note">Consultation fee ka bill ban jayega — payment clinic pe apne chosen method se hogi.</p>
+                <div id="upiPayBox" style="display:none; margin-top:14px; border:1.5px dashed var(--blue-300); border-radius:12px; padding:16px; text-align:center;">
+                  <p style="font-size:13px; font-weight:700; margin-bottom:4px;">UPI se pay karo</p>
+                  <p style="font-size:12.5px; color:var(--gray-500); margin-bottom:12px;">Neeche QR scan karo aur <b id="upiFeeText">—</b> pay karo, phir transaction ID daalo.</p>
+                  <img data-upi-qr alt="UPI QR code" style="width:180px; height:180px; object-fit:contain; border-radius:10px; background:#fff;">
+                  <div class="form-group" style="text-align:left; margin-top:14px;">
+                    <label class="form-label">UPI Transaction ID</label>
+                    <input type="text" class="form-control" id="upiTxnId" placeholder="e.g. 123456789012">
+                  </div>
+                  <p style="font-size:12px; color:var(--gray-400); margin-top:8px; line-height:1.6;">Transaction ID khaali chhodo to bill Pending rahega — clinic pe bhi pay kar sakte ho.</p>
+                </div>
               </div>
             </form>
           </div>
@@ -122,8 +132,13 @@
 <script src="../js/ui.js"></script>
 <script src="../js/config.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/upi-qr.js"></script>
 <script>
   initApp({ page: 'book-appointment', title: 'Book Appointment', subtitle: 'My Care' });
+
+  if (typeof UPI_QR_DATA_URL !== 'undefined') {
+    document.querySelectorAll('img[data-upi-qr]').forEach(im => { im.src = UPI_QR_DATA_URL; });
+  }
 
   let myPid = null, doctors = [];
 
@@ -164,7 +179,17 @@
   document.getElementById('doctorSelect').addEventListener('change', (e) => {
     const d = doctors.find(x => String(x.doctor_id) === e.target.value);
     document.getElementById('feePreview').textContent = d ? formatCurrency(d.consultation_fee) : '—';
+    updateUpiBox();
   });
+
+  function updateUpiBox() {
+    const method = (document.querySelector('input[name="payMethod"]:checked') || {}).value;
+    const d = doctors.find(x => String(x.doctor_id) === document.getElementById('doctorSelect').value);
+    const show = method === 'UPI';
+    document.getElementById('upiPayBox').style.display = show ? 'block' : 'none';
+    if (show) document.getElementById('upiFeeText').textContent = d ? formatCurrency(d.consultation_fee) : '—';
+  }
+  document.querySelectorAll('input[name="payMethod"]').forEach(r => r.addEventListener('change', updateUpiBox));
 
   async function submitForm() {
     const fields = ['doctorSelect', 'apptDate', 'apptTime'];
@@ -183,8 +208,9 @@
     const doctor = doctors.find(x => String(x.doctor_id) === document.getElementById('doctorSelect').value);
     const payMethod = (document.querySelector('input[name="payMethod"]:checked') || {}).value || 'Pay at Clinic';
     const fee = doctor ? (doctor.consultation_fee || 0) : 0;
+    const txnId = payMethod === 'UPI' ? document.getElementById('upiTxnId').value.trim() : '';
     const userNotes = document.getElementById('notes').value.trim();
-    const notes = `Payment: ${payMethod} | Fee: ${formatCurrency(fee)}` + (userNotes ? `\n${userNotes}` : '');
+    const notes = `Payment: ${payMethod} | Fee: ${formatCurrency(fee)}` + (txnId ? ` | Txn: ${txnId}` : '') + (userNotes ? `\n${userNotes}` : '');
 
     const body = {
       patient_id: myPid,
@@ -197,17 +223,32 @@
     const res = await DoctorsAPI.assign(body);
     if (res && res.assignment_id) {
       // Consultation bill for the doctor's fee (Pending — paid at the clinic)
+      let billId = null;
       try {
-        await BillingAPI.createBill({
+        const billRes = await BillingAPI.createBill({
           patient_id: myPid,
           description: `Consultation — Dr. ${doctor ? doctor.first_name + ' ' + doctor.last_name : ''}`,
           category: 'Consultation',
           amount: fee,
           status: 'Pending',
         });
+        billId = billRes && billRes.bill_id;
       } catch (e) { /* bill failure must not block the booking */ }
+      // UPI paid already? Record it against the bill with the transaction ID.
+      if (billId && txnId) {
+        try {
+          await BillingAPI.recordPayment({
+            bill_id: billId,
+            patient_id: myPid,
+            amount_paid: fee,
+            payment_method: 'UPI',
+            transaction_id: txnId,
+          });
+        } catch (e) { /* payment record failure must not block the booking */ }
+      }
       showToast('Appointment booked! Confirm it to get your QR code.', 'success', 'Booked');
-      setTimeout(() => { window.location.href = `appointment-confirm.html?assignment_id=${res.assignment_id}`; }, 900);
+      const q = `appointment-confirm.html?assignment_id=${res.assignment_id}` + (billId ? `&bill_id=${billId}` : '');
+      setTimeout(() => { window.location.href = q; }, 900);
       return;
     }
     btn.textContent = 'Book Appointment'; btn.disabled = false;
