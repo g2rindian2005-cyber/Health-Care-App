@@ -651,6 +651,7 @@ function skeletonRows(cols, count = 5) {
 function statusBadge(status) {
   const map = {
     'Paid':             'badge-success',
+    'Confirmed':         'badge-success',
     'Active':           'badge-success',
     'Available':        'badge-success',
     'Recovered':        'badge-success',

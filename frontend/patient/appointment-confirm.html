@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointment Confirmation — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    .ticket { max-width: 640px; margin: 0 auto; }
+    .ticket-head { text-align:center; padding: 26px 20px 10px; }
+    .ticket-head h2 { font-size: 20px; font-weight: 800; margin: 10px 0 4px; }
+    .ticket-head p { font-size: 13px; color: var(--gray-500); }
+    .ticket-rows { padding: 10px 22px 6px; }
+    .ticket-row { display:flex; justify-content:space-between; gap:12px; padding: 9px 0; border-bottom: 1px dashed var(--gray-200); font-size: 13.5px; }
+    .ticket-row:last-child { border-bottom: none; }
+    .ticket-row .k { color: var(--gray-500); }
+    .ticket-row .v { font-weight: 600; text-align: right; }
+    .qr-wrap { text-align:center; padding: 18px 20px 8px; }
+    .qr-box { display:inline-block; padding: 12px; background:#fff; border:1.5px solid var(--gray-200); border-radius:14px; }
+    .qr-box img, .qr-box canvas { display:block; }
+    .qr-note { font-size: 12.5px; color: var(--gray-500); margin-top: 12px; line-height: 1.7; }
+    .qr-fallback { text-align:left; font-size:13px; line-height:1.9; padding: 12px 16px; background: var(--gray-50); border-radius: 10px; white-space: pre-line; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Appointment Confirmation</h1>
+          <p>Confirm your booking and get your check-in QR code</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="my-appointments.html" class="btn btn-outline btn-sm">← My Appointments</a>
+        </div>
+      </div>
+
+      <!-- Loading / error -->
+      <div class="card ticket" id="loadingCard">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <div class="spinner"></div>
+          <p style="font-size:13px; color:var(--gray-500); margin-top:14px;">Loading your appointment…</p>
+        </div>
+      </div>
+
+      <div class="card ticket" id="errorCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Appointment not found</h3>
+          <p style="font-size:13.5px; color:var(--gray-500); margin-bottom:18px;">Ye booking nahi mili, ya ye tumhari booking nahi hai.</p>
+          <a href="my-appointments.html" class="btn btn-primary">My Appointments</a>
+        </div>
+      </div>
+
+      <!-- Ticket -->
+      <div class="card ticket" id="ticketCard" style="display:none;">
+        <div class="ticket-head">
+          <div id="ticketStatus"></div>
+          <h2 id="ticketTitle">Appointment</h2>
+          <p id="ticketSub"></p>
+        </div>
+        <div class="ticket-rows" id="ticketRows"></div>
+
+        <!-- Confirm step (only while Scheduled) -->
+        <div id="confirmStep" style="display:none; padding: 6px 22px 18px; text-align:center;">
+          <p style="font-size:13px; color:var(--gray-500); line-height:1.7; margin-bottom:14px;">
+            Details check karo — sahi hai to confirm karo. Confirm karte hi tumhara QR code ban jayega.
+          </p>
+          <button class="btn btn-primary" id="confirmBtn" onclick="confirmAppointment()">Confirm Appointment</button>
+        </div>
+
+        <!-- QR (only when Confirmed) -->
+        <div id="qrStep" style="display:none;">
+          <div class="qr-wrap">
+            <div class="qr-box" id="qrBox"></div>
+            <div id="qrFallback" style="display:none; padding: 0 22px;"><div class="qr-fallback" id="qrFallbackText"></div></div>
+            <p class="qr-note">Hospital reception pe ye QR dikhao — check-in ke liye.<br>Booking ID aur Token Number bhi saath me dikha dena.</p>
+          </div>
+        </div>
+
+        <div class="card-footer" style="justify-content:center; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline btn-sm" id="downloadQrBtn" onclick="downloadQR()" style="display:none;">Download QR</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print</button>
+          <a href="my-appointments.html" class="btn btn-primary btn-sm">My Appointments</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  initApp({ page: 'appointment-confirm', title: 'Appointment Confirmation', subtitle: 'My Care' });
+
+  let asgId = null, asg = null, doctor = null, patient = null, qrText = '';
+
+  function parsePayment(notes) {
+    const out = { method: '—', fee: '—', reason: '' };
+    if (!notes) return out;
+    const lines = String(notes).split('\n');
+    const payLine = lines.find(l => l.trim().startsWith('Payment:')) || '';
+    const m = payLine.match(/Payment:\s*([^|]+)/);
+    const f = payLine.match(/Fee:\s*([^\n]+)/);
+    if (m) out.method = m[1].trim();
+    if (f) out.fee = f[1].trim();
+    out.reason = lines.filter(l => !l.trim().startsWith('Payment:')).join('\n').trim();
+    return out;
+  }
+
+  function show(el) { document.getElementById(el).style.display = 'block'; }
+  function hide(el) { document.getElementById(el).style.display = 'none'; }
+
+  async function init() {
+    asgId = new URLSearchParams(window.location.search).get('assignment_id');
+    if (!asgId) { hide('loadingCard'); show('errorCard'); return; }
+
+    const res = await DoctorsAPI.assignment(asgId);
+    asg = res && res.assignment;
+    if (!asg) { hide('loadingCard'); show('errorCard'); return; }
+
+    const [dRes, pRes] = await Promise.all([
+      DoctorsAPI.get(asg.doctor_id),
+      PatientsAPI.get(asg.patient_id),
+    ]);
+    doctor = dRes && dRes.doctor;
+    patient = pRes && pRes.patient;
+
+    renderTicket();
+    hide('loadingCard');
+    show('ticketCard');
+  }
+
+  function renderTicket() {
+    const pay = parsePayment(asg.notes);
+    const docName = doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : '—';
+    const patName = patient ? `${patient.first_name} ${patient.last_name}` : '—';
+    const dateStr = (asg.appointment_date || '').toString().slice(0, 16);
+
+    document.getElementById('ticketStatus').innerHTML = statusBadge(asg.status);
+    document.getElementById('ticketTitle').textContent = `Appointment #${asg.assignment_id}`;
+    document.getElementById('ticketSub').textContent = `${docName} · ${dateStr}`;
+
+    const rows = [
+      ['Patient', `${patName} (PID ${asg.patient_id})`],
+      ['Doctor', `${docName}${doctor && doctor.specialization ? ' — ' + doctor.specialization : ''}`],
+      ['Date & Time', dateStr || '—'],
+      ['Room', asg.room_number || '—'],
+      ['Consultation Fee', pay.fee],
+      ['Payment Method', pay.method],
+      ['Payment Status', 'Pending — clinic pe hogi'],
+      ['Status', asg.status],
+    ];
+    if (pay.reason) rows.push(['Reason', pay.reason]);
+    document.getElementById('ticketRows').innerHTML = rows.map(([k, v]) =>
+      `<div class="ticket-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+    qrText = [
+      'HealtheCare Appointment',
+      `Booking ID: HCA-${asg.assignment_id}`,
+      `Patient: ${patName} (PID ${asg.patient_id})`,
+      `Doctor: ${docName}`,
+      `Date: ${dateStr}`,
+      `Status: ${asg.status}`,
+      `Fee: ${pay.fee} | Payment: ${pay.method}`,
+    ].join('\n');
+
+    if (asg.status === 'Scheduled') {
+      show('confirmStep');
+      hide('qrStep');
+      hide('downloadQrBtn');
+    } else if (asg.status === 'Confirmed') {
+      hide('confirmStep');
+      show('qrStep');
+      makeQR();
+    } else {
+      hide('confirmStep');
+      hide('qrStep');
+      hide('downloadQrBtn');
+    }
+  }
+
+  function makeQR() {
+    const box = document.getElementById('qrBox');
+    box.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(box, { text: qrText, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+      show('downloadQrBtn');
+    } else {
+      hide('qrBox');
+      document.getElementById('qrFallbackText').textContent = qrText;
+      show('qrFallback');
+    }
+  }
+
+  async function confirmAppointment() {
+    const btn = document.getElementById('confirmBtn');
+    btn.textContent = 'Confirming…'; btn.disabled = true;
+    const res = await DoctorsAPI.updateAssign(asgId, { status: 'Confirmed' });
+    if (res) {
+      asg.status = 'Confirmed';
+      showToast('Appointment confirmed! Your QR code is ready.', 'success', 'Confirmed');
+      renderTicket();
+    } else {
+      btn.textContent = 'Confirm Appointment'; btn.disabled = false;
+    }
+  }
+
+  function downloadQR() {
+    const box = document.getElementById('qrBox');
+    const img = box.querySelector('img');
+    const canvas = box.querySelector('canvas');
+    const url = img ? img.src : (canvas ? canvas.toDataURL('image/png') : null);
+    if (!url) { showToast('QR code abhi ready nahi hai.', 'warning'); return; }
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `HealtheCare-Appointment-HCA-${asgId}.png`;
+    a.click();
+  }
+
+  init();
+</script>
+</body>
+</html>

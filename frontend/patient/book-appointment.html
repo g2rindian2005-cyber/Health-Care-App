@@ -6,6 +6,15 @@
   <title>Book Appointment — HealtheCare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    .pay-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .pay-method { display:flex; align-items:center; gap:8px; border:1.5px solid var(--gray-200); border-radius:10px; padding:10px 12px; cursor:pointer; font-size:13px; font-weight:600; color:var(--gray-600); }
+    .pay-method:hover { border-color:var(--blue-400); }
+    .pay-method:has(input:checked) { border-color:var(--blue-600); background:var(--blue-50); color:var(--blue-700); }
+    .pay-method input { accent-color:var(--blue-600); }
+    .pay-note { font-size:12px; color:var(--gray-400); margin-top:10px; line-height:1.6; }
+    @media (max-width: 640px) { .pay-methods { grid-template-columns:repeat(2,1fr); } }
+  </style>
 </head>
 <body>
 <div class="app-layout">
@@ -31,7 +40,7 @@
           <div class="card-header">
             <div class="card-header-left">
               <h3>Appointment Details</h3>
-              <p>New bookings start as “Scheduled” — the hospital confirms them</p>
+              <p>Book karo, payment method chuno, phir confirm karke QR pao</p>
             </div>
           </div>
           <div class="card-body">
@@ -62,6 +71,18 @@
                   </div>
                 </div>
               </div>
+              <div class="form-section">
+                <div class="form-section-title">Payment Method <span class="required">*</span></div>
+                <div class="pay-methods" id="payMethods">
+                  <label class="pay-method"><input type="radio" name="payMethod" value="UPI"> UPI</label>
+                  <label class="pay-method"><input type="radio" name="payMethod" value="Card"> Card</label>
+                  <label class="pay-method"><input type="radio" name="payMethod" value="Net Banking"> Net Banking</label>
+                  <label class="pay-method"><input type="radio" name="payMethod" value="Wallet"> Wallet</label>
+                  <label class="pay-method"><input type="radio" name="payMethod" value="Insurance Cashless"> Insurance</label>
+                  <label class="pay-method"><input type="radio" name="payMethod" value="Pay at Clinic" checked> Pay at Clinic</label>
+                </div>
+                <p class="pay-note">Consultation fee ka bill ban jayega — payment clinic pe apne chosen method se hogi.</p>
+              </div>
             </form>
           </div>
           <div class="card-footer">
@@ -77,8 +98,9 @@
             <div class="card-body">
               <ul style="font-size:12.5px; color:var(--gray-500); line-height:1.9; padding-left:16px; list-style:disc;">
                 <li>Pick a doctor, date and time</li>
-                <li>Your booking starts as <b>Scheduled</b></li>
-                <li>The hospital confirms it — then it shows as <b>Active</b></li>
+                <li>Choose a payment method — fee ka bill ban jayega</li>
+                <li>Confirm your booking — phir QR code milega</li>
+                <li>Hospital pe QR dikhao, check-in karo</li>
                 <li>You can cancel it anytime from My Appointments</li>
               </ul>
             </div>
@@ -158,21 +180,37 @@
     const btn = document.getElementById('submitBtn');
     btn.textContent = 'Booking…'; btn.disabled = true;
 
+    const doctor = doctors.find(x => String(x.doctor_id) === document.getElementById('doctorSelect').value);
+    const payMethod = (document.querySelector('input[name="payMethod"]:checked') || {}).value || 'Pay at Clinic';
+    const fee = doctor ? (doctor.consultation_fee || 0) : 0;
+    const userNotes = document.getElementById('notes').value.trim();
+    const notes = `Payment: ${payMethod} | Fee: ${formatCurrency(fee)}` + (userNotes ? `\n${userNotes}` : '');
+
     const body = {
       patient_id: myPid,
       doctor_id: parseInt(document.getElementById('doctorSelect').value, 10),
       appointment_date: document.getElementById('apptDate').value + ' ' + document.getElementById('apptTime').value,
       status: 'Scheduled',
-      notes: document.getElementById('notes').value.trim(),
+      notes,
     };
 
     const res = await DoctorsAPI.assign(body);
-    btn.textContent = 'Book Appointment'; btn.disabled = false;
-
-    if (res) {
-      showToast('Appointment booked! It is Scheduled — the hospital will confirm it.', 'success', 'Booked');
-      setTimeout(() => { window.location.href = 'my-appointments.html'; }, 900);
+    if (res && res.assignment_id) {
+      // Consultation bill for the doctor's fee (Pending — paid at the clinic)
+      try {
+        await BillingAPI.createBill({
+          patient_id: myPid,
+          description: `Consultation — Dr. ${doctor ? doctor.first_name + ' ' + doctor.last_name : ''}`,
+          category: 'Consultation',
+          amount: fee,
+          status: 'Pending',
+        });
+      } catch (e) { /* bill failure must not block the booking */ }
+      showToast('Appointment booked! Confirm it to get your QR code.', 'success', 'Booked');
+      setTimeout(() => { window.location.href = `appointment-confirm.html?assignment_id=${res.assignment_id}`; }, 900);
+      return;
     }
+    btn.textContent = 'Book Appointment'; btn.disabled = false;
   }
 
   init();
