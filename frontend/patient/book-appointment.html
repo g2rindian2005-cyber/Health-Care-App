@@ -87,10 +87,11 @@
                   <p style="font-size:12.5px; color:var(--gray-500); margin-bottom:12px;">Neeche QR scan karo aur <b id="upiFeeText">—</b> pay karo, phir transaction ID daalo.</p>
                   <img data-upi-qr alt="UPI QR code" style="width:180px; height:180px; object-fit:contain; border-radius:10px; background:#fff;">
                   <div class="form-group" style="text-align:left; margin-top:14px;">
-                    <label class="form-label">UPI Transaction ID</label>
-                    <input type="text" class="form-control" id="upiTxnId" placeholder="e.g. 123456789012">
+                    <label class="form-label">UPI Transaction ID (UTR) <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="upiTxnId" placeholder="12-digit number, e.g. 123456789012" maxlength="12" inputmode="numeric">
+                    <span class="form-error">12-digit Transaction ID daalo.</span>
                   </div>
-                  <p style="font-size:12px; color:var(--gray-400); margin-top:8px; line-height:1.6;">Transaction ID khaali chhodo to bill Pending rahega — clinic pe bhi pay kar sakte ho.</p>
+                  <p style="font-size:12px; color:var(--gray-400); margin-top:8px; line-height:1.6;">UPI se pay karna hai to pehle QR scan karo, phir 12-digit transaction ID daalo. Abhi pay nahi karna to "Pay at Clinic" chuno.</p>
                 </div>
               </div>
             </form>
@@ -209,6 +210,13 @@
     const payMethod = (document.querySelector('input[name="payMethod"]:checked') || {}).value || 'Pay at Clinic';
     const fee = doctor ? (doctor.consultation_fee || 0) : 0;
     const txnId = payMethod === 'UPI' ? document.getElementById('upiTxnId').value.trim() : '';
+    if (payMethod === 'UPI' && !/^\d{12}$/.test(txnId)) {
+      document.getElementById('upiTxnId').classList.add('is-invalid');
+      showToast('UPI ke liye 12-digit Transaction ID (UTR) daalo.', 'warning');
+      btn.textContent = 'Book Appointment'; btn.disabled = false;
+      return;
+    }
+    document.getElementById('upiTxnId').classList.remove('is-invalid');
     const userNotes = document.getElementById('notes').value.trim();
     const notes = `Payment: ${payMethod} | Fee: ${formatCurrency(fee)}` + (txnId ? ` | Txn: ${txnId}` : '') + (userNotes ? `\n${userNotes}` : '');
 

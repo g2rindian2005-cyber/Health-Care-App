@@ -89,8 +89,9 @@
           </p>
           <img data-upi-qr alt="UPI QR code" style="width:160px; height:160px; object-fit:contain; border-radius:10px; background:#fff; margin-bottom:12px;">
           <div class="form-group" style="text-align:left;">
-            <label class="form-label">UPI Transaction ID</label>
-            <input type="text" class="form-control" id="upiLaterTxnId" placeholder="e.g. 123456789012">
+            <label class="form-label">UPI Transaction ID (UTR) <span class="required">*</span></label>
+            <input type="text" class="form-control" id="upiLaterTxnId" placeholder="12-digit number, e.g. 123456789012" maxlength="12" inputmode="numeric">
+            <span class="form-error">12-digit Transaction ID daalo.</span>
           </div>
           <button class="btn btn-primary" id="recordPayBtn" onclick="recordUpiPayment()" style="margin-top:12px;">I Paid — Record Payment</button>
         </div>
@@ -242,7 +243,12 @@
 
   async function recordUpiPayment() {
     const txn = document.getElementById('upiLaterTxnId').value.trim();
-    if (!txn) { showToast('Transaction ID daalo.', 'warning'); return; }
+    if (!/^\d{12}$/.test(txn)) {
+      document.getElementById('upiLaterTxnId').classList.add('is-invalid');
+      showToast('12-digit Transaction ID (UTR) daalo.', 'warning');
+      return;
+    }
+    document.getElementById('upiLaterTxnId').classList.remove('is-invalid');
     const btn = document.getElementById('recordPayBtn');
     btn.textContent = 'Recording…'; btn.disabled = true;
     const pay = parsePayment(asg.notes);
