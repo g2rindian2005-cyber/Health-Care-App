@@ -179,7 +179,7 @@ Write down `cloudfront_url` (the site) and `api_gateway_url` (the API).
 
 ```bash
 cd ..
-aws s3 sync frontend/ s3://hospital2-management-frontend-bucket/
+aws s3 mb s3://hospital2-management-frontend-bucket --region us-east-1
 ```
 
 The bucket name is `<project>-management-frontend-bucket` from your
