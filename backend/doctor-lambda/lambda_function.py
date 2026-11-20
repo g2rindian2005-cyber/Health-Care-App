@@ -43,7 +43,11 @@ import os
 # iss / token_use / aud / exp. The pool id and client id come from
 # Terraform common_env on every apply. A missing or invalid token
 # fails closed (401) — there is no legacy bypass any more.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "email"))
+# Email helpers (send_email.py + smtp_config.py + templates/) are packaged
+# inside this Lambda's own directory, so a plain import works at runtime.
+# (The old sys.path hack pointed at repo-root email/, which the Lambda zip
+# never contained — the import silently failed and no appointment email
+# was ever sent.)
 try:
     from send_email import send_appointment_email  # noqa: E402
 except Exception:
@@ -339,6 +343,21 @@ def _dispatch(event, context):
             if changes.get(k):
                 changes[k] = int(changes[k])
         update_item(ASSIGNMENTS, aid, changes)
+        # Appointment confirmed -> notify the patient by email ("Your
+        # appointment is confirmed"). Best-effort only: a failed email
+        # must never break the API response.
+        if _row and changes.get("status") == "Confirmed" and send_appointment_email:
+            try:
+                _p = get_item(PATIENTS, int(_row.get("patient_id")))
+                _did = changes.get("doctor_id", _row.get("doctor_id"))
+                _doc = get_item(DOCTORS, int(_did)) if _did else None
+                _date = changes.get("appointment_date", _row.get("appointment_date"))
+                if _p and _p.get("email"):
+                    send_appointment_email(_p["email"], _p.get("patient_id", _row.get("patient_id")),
+                                           aid, full_name(_doc) or "",
+                                           _date or "")
+            except Exception:
+                pass
         return _json(200, {"message": "Assignment updated", "assignment_id": aid})
 
     if method == "DELETE" and resource.endswith("/assignments/{assignment_id}"):

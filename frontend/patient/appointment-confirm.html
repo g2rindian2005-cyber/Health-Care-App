@@ -85,6 +85,7 @@
             <div class="qr-box" id="qrBox"></div>
             <div id="qrFallback" style="display:none; padding: 0 22px;"><div class="qr-fallback" id="qrFallbackText"></div></div>
             <p class="qr-note">Hospital reception pe ye QR dikhao — check-in ke liye.<br>Booking ID aur Token Number bhi saath me dikha dena.</p>
+            <p class="qr-note" id="emailNotify" style="display:none; color:#bbf7d0; font-weight:600;">Appointment confirm hone ki notification <b id="emailNotifyAddr"></b> pe bhej di gayi hai — apna inbox check karo.</p>
           </div>
         </div>
 
@@ -214,6 +215,13 @@
       hide('confirmStep');
       show('qrStep');
       makeQR();
+      // Confirmation email notification (the backend sends it on confirm)
+      const notify = document.getElementById('emailNotify');
+      if (notify) {
+        const addr = patient && patient.email ? patient.email : '';
+        document.getElementById('emailNotifyAddr').textContent = addr || 'tumhare email';
+        notify.style.display = 'block';
+      }
     } else {
       hide('confirmStep');
       hide('qrStep');
@@ -240,7 +248,7 @@
     const res = await DoctorsAPI.updateAssign(asgId, { status: 'Confirmed' });
     if (res) {
       asg.status = 'Confirmed';
-      showToast('Appointment confirmed! Your QR code is ready.', 'success', 'Confirmed');
+      showToast('Appointment confirmed! Confirmation email sent to your email.', 'success', 'Confirmed');
       renderTicket();
     } else {
       btn.textContent = 'Confirm Appointment'; btn.disabled = false;
