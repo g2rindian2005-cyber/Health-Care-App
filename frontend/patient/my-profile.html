@@ -4,62 +4,61 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Profile — HealtheCare</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
-    /* ---------- Premium Luxury — My Profile (Midnight Sapphire) ---------- */
-    body.lux { background: linear-gradient(180deg, #050d1f 0%, #0a1a3d 340px, #eef2f8 340px); }
-    body.lux .page-content { background: transparent; }
-    .lux-hero { position: relative; border-radius: 22px; overflow: hidden; background: linear-gradient(120deg, #04091a 0%, #0a1a3d 55%, #0f52ba 100%); color: #fff; padding: 30px 30px 26px; box-shadow: 0 18px 44px rgba(4, 9, 26, .45); margin-bottom: 22px; }
-    .lux-hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 3px; background: linear-gradient(90deg, transparent, #4a86e8, transparent); }
-    .lux-hero::before { content: ""; position: absolute; width: 340px; height: 340px; border-radius: 50%; right: -90px; top: -140px; background: radial-gradient(circle, rgba(74,134,232,.32), rgba(74,134,232,0) 65%); }
-    .lux-hero-in { position: relative; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-    .lux-avatar { width: 92px; height: 92px; border-radius: 50%; flex: 0 0 92px; display: flex; align-items: center; justify-content: center; font-family: "Playfair Display", serif; font-size: 40px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #5b9bf0, #0f52ba); border: 3px solid rgba(255,255,255,.85); box-shadow: 0 8px 22px rgba(0,0,0,.35); }
-    .lux-hero h2 { font-family: "Playfair Display", serif; font-size: 30px; margin: 0 0 4px; letter-spacing: .2px; }
-    .lux-hero .sub { color: rgba(219,234,254,.85); font-size: 13.5px; }
-    .lux-pid { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #fff; background: linear-gradient(135deg, #2b6fd6, #0f52ba); border-radius: 999px; padding: 5px 12px; }
-    .lux-hero .meta { margin-left: auto; text-align: right; color: rgba(219,234,254,.9); font-size: 13px; line-height: 1.9; }
-    .lux-hero .meta b { color: #a8c8f0; }
-    .lux-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
-    .lux-card { background: #fff; border: 1px solid #dbe4f0; border-radius: 18px; box-shadow: 0 10px 30px rgba(15,82,186,.10); overflow: hidden; }
-    .lux-card-head { padding: 18px 22px 14px; border-bottom: 1px solid #e6edf7; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .lux-card-head h3 { font-family: "Playfair Display", serif; font-size: 20px; color: #0a1a3d; margin: 0; }
-    .lux-card-head p { margin: 2px 0 0; font-size: 12.5px; color: #8a94a6; }
-    .lux-card-body { padding: 8px 22px 20px; }
-    .lux-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid #eef2f8; }
-    .lux-row:last-child { border-bottom: none; }
-    .lux-row .k { font-size: 11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #6b7fa3; }
-    .lux-row .v { font-size: 15px; font-weight: 600; color: #16213a; text-align: right; }
-    .lux-row input.v { border: none; background: transparent; font-size: 15px; font-weight: 600; color: #16213a; text-align: right; padding: 0; width: 60%; outline: none; }
-    .lux-row input.v:disabled { color: #16213a; -webkit-text-fill-color: #16213a; opacity: 1; }
-    .lux-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #dbe4f0; }
-    .lux-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: #6b7fa3; margin-bottom: 6px; }
-    .lux-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #6b7fa3; margin: 12px 0 6px; }
-    .lux-field input, .lux-field select { width: 100%; border: 1.5px solid #d5e0ef; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #16213a; background: #f8fbff; outline: none; }
-    .lux-field input:focus, .lux-field select:focus { border-color: #0f52ba; box-shadow: 0 0 0 3px rgba(15,82,186,.18); background: #fff; }
-    .lux-field input.is-invalid, .lux-field select.is-invalid { border-color: #dc2626; }
-    .lux-field .form-error { display: none; color: #dc2626; font-size: 12px; margin-top: 5px; }
-    .lux-field input.is-invalid + .form-error, .lux-field select.is-invalid + .form-error { display: block; }
-    .lux-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .lux-card-foot { padding: 16px 22px; border-top: 1px solid #e6edf7; background: #f8fbff; display: flex; justify-content: flex-end; }
-    .btn-sapphire { background: linear-gradient(135deg, #2b6fd6, #0f52ba); color: #fff; border: none; font-weight: 800; letter-spacing: .3px; border-radius: 12px; padding: 12px 22px; cursor: pointer; box-shadow: 0 8px 20px rgba(15,82,186,.35); }
-    .btn-sapphire:hover { filter: brightness(1.08); }
-    .btn-sapphire:disabled { opacity: .6; cursor: not-allowed; }
-    .lux-side { display: flex; flex-direction: column; gap: 18px; }
-    .lux-note { font-size: 13px; color: #5b6b82; line-height: 1.85; }
-    .lux-note b { color: #16213a; }
-    .lux-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .lux-chip { font-size: 12px; font-weight: 700; color: #0a1a3d; background: #eef2f8; border: 1px solid #dbe4f0; border-radius: 999px; padding: 6px 11px; }
-    .lux-acct { background: linear-gradient(135deg, #0a1a3d, #0f52ba); color: #fff; }
-    .lux-acct h3 { color: #fff; }
-    .lux-acct .lux-note { color: rgba(219,234,254,.9); }
-    .lux-acct .lux-note b { color: #a8c8f0; }
-    .btn-ghost-light { display: inline-block; margin-top: 12px; border: 1.5px solid rgba(255,255,255,.55); color: #fff; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .btn-ghost-light:hover { background: rgba(255,255,255,.12); }
-    @media (max-width: 900px) { .lux-grid { grid-template-columns: 1fr; } .lux-hero .meta { margin-left: 0; text-align: left; } }
+    /* ---------- My Profile — Light Clean (approved demo) ---------- */
+    body.clean { background: #f2f6fb; }
+    body.clean .page-content { background: transparent; }
+    .clean-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 26px 28px; box-shadow: 0 6px 24px rgba(15, 23, 42, .06); margin-bottom: 16px; }
+    .clean-avatar { width: 88px; height: 88px; border-radius: 50%; flex: 0 0 88px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #14b8a6, #0d9488); box-shadow: 0 8px 20px rgba(13, 148, 136, .35); }
+    .clean-hero h2 { font-size: 26px; font-weight: 800; color: #0f172a; margin: 0 0 3px; letter-spacing: -.2px; }
+    .clean-hero .sub { color: #64748b; font-size: 13.5px; }
+    .clean-pid { display: inline-block; margin-top: 9px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 5px 12px; }
+    .clean-hero-side { margin-left: auto; text-align: right; color: #64748b; font-size: 13px; line-height: 1.9; }
+    .clean-hero-side b { color: #0f766e; }
+    .clean-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+    .clean-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(15, 23, 42, .04); }
+    .clean-stat .k { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+    .clean-stat .v { font-size: 19px; font-weight: 800; color: #0f172a; }
+    .clean-stat .v.teal { color: #0d9488; }
+    .clean-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
+    .clean-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); overflow: hidden; }
+    .clean-card-head { padding: 18px 22px 14px; border-bottom: 1px solid #eef2f7; }
+    .clean-card-head h3 { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }
+    .clean-card-head p { margin: 3px 0 0; font-size: 12.5px; color: #64748b; }
+    .clean-card-body { padding: 6px 22px 20px; }
+    .clean-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid #f1f5f9; }
+    .clean-row:last-child { border-bottom: none; }
+    .clean-row .k { font-size: 11.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: #64748b; }
+    .clean-row .v { font-size: 15px; font-weight: 600; color: #0f172a; text-align: right; }
+    .clean-row input.v { border: none; background: transparent; font-size: 15px; font-weight: 600; color: #0f172a; text-align: right; padding: 0; width: 60%; outline: none; }
+    .clean-row input.v:disabled { color: #0f172a; -webkit-text-fill-color: #0f172a; opacity: 1; }
+    .clean-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #e2e8f0; }
+    .clean-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #0d9488; margin-bottom: 6px; }
+    .clean-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; margin: 12px 0 6px; }
+    .clean-field input, .clean-field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #0f172a; background: #fff; outline: none; }
+    .clean-field input:focus, .clean-field select:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, .15); }
+    .clean-field input.is-invalid, .clean-field select.is-invalid { border-color: #dc2626; }
+    .clean-field .form-error { display: none; color: #dc2626; font-size: 12px; margin-top: 5px; }
+    .clean-field input.is-invalid + .form-error, .clean-field select.is-invalid + .form-error { display: block; }
+    .clean-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .clean-card-foot { padding: 16px 22px; border-top: 1px solid #eef2f7; background: #f8fafc; display: flex; justify-content: flex-end; }
+    .btn-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff; border: none; font-weight: 800; letter-spacing: .3px; border-radius: 12px; padding: 12px 22px; cursor: pointer; box-shadow: 0 8px 20px rgba(13, 148, 136, .30); }
+    .btn-teal:hover { filter: brightness(1.06); }
+    .btn-teal:disabled { opacity: .6; cursor: not-allowed; }
+    .clean-side { display: flex; flex-direction: column; gap: 16px; }
+    .clean-note { font-size: 13px; color: #475569; line-height: 1.85; }
+    .clean-note b { color: #0f172a; }
+    .clean-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .clean-chip { font-size: 12px; font-weight: 700; color: #0f766e; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 999px; padding: 6px 11px; }
+    .clean-acct { border-top: 3px solid #0d9488; }
+    .btn-link-teal { display: inline-block; margin-top: 12px; border: 1.5px solid #0d9488; color: #0f766e; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .btn-link-teal:hover { background: #f0fdfa; }
+    @media (max-width: 900px) { .clean-grid { grid-template-columns: 1fr; } .clean-stats { grid-template-columns: 1fr 1fr; } .clean-hero-side { margin-left: 0; text-align: left; } }
   </style>
 </head>
-<body class="lux">
+<body class="clean">
 <div class="app-layout">
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main-content">
@@ -68,78 +67,84 @@
 
       <div class="page-header">
         <div class="page-header-left">
-          <h1 style="font-family:'Playfair Display',serif;">My Profile</h1>
+          <h1>My Profile</h1>
           <p>Your patient record linked to this account</p>
         </div>
       </div>
 
       <!-- Existing profile -->
       <div id="profileWrap" style="display:none;">
-        <div class="lux-hero">
-          <div class="lux-hero-in">
-            <div class="lux-avatar" id="avatarInitial">G</div>
-            <div>
-              <h2 id="heroName">—</h2>
-              <div class="sub" id="heroEmail">—</div>
-              <span class="lux-pid" id="pidBadge">PID-????</span>
-            </div>
-            <div class="meta">
-              <div>Member since <b id="heroSince">—</b></div>
-              <div>Blood Group <b id="heroBlood">—</b></div>
-            </div>
+        <div class="clean-hero">
+          <div class="clean-avatar" id="avatarInitial">G</div>
+          <div>
+            <h2 id="heroName">—</h2>
+            <div class="sub" id="heroEmail">—</div>
+            <span class="clean-pid" id="pidBadge">PID-????</span>
+          </div>
+          <div class="clean-hero-side">
+            <div>Member since <b id="heroSince">—</b></div>
+            <div>Blood Group <b id="heroBlood">—</b></div>
           </div>
         </div>
 
-        <div class="lux-grid">
-          <div class="lux-card">
-            <div class="lux-card-head">
-              <div><h3>Patient Details</h3><p>Linked to your login email</p></div>
-            </div>
-            <div class="lux-card-body">
-              <div class="lux-row"><span class="k">Full Name</span><input type="text" class="v" id="viewName" disabled></div>
-              <div class="lux-row"><span class="k">Email</span><input type="text" class="v" id="viewEmail" disabled></div>
-              <div class="lux-row"><span class="k">Date of Birth</span><input type="text" class="v" id="viewDob" disabled></div>
-              <div class="lux-row"><span class="k">Gender</span><input type="text" class="v" id="viewGender" disabled></div>
-              <div class="lux-row"><span class="k">Blood Group</span><input type="text" class="v" id="viewBlood" disabled></div>
-              <div class="lux-row"><span class="k">Registered On</span><input type="text" class="v" id="viewReg" disabled></div>
+        <div class="clean-stats">
+          <div class="clean-stat"><span class="k">Blood Group</span><span class="v teal" id="statBlood">—</span></div>
+          <div class="clean-stat"><span class="k">Gender</span><span class="v" id="statGender">—</span></div>
+          <div class="clean-stat"><span class="k">Date of Birth</span><span class="v" id="statDob">—</span></div>
+          <div class="clean-stat"><span class="k">Member Since</span><span class="v" id="statSince">—</span></div>
+        </div>
 
-              <div class="lux-sec">
-                <div class="lux-sec-title">Edit Contact Details</div>
-                <div class="lux-2col">
-                  <div class="lux-field">
+        <div class="clean-grid">
+          <div class="clean-card">
+            <div class="clean-card-head">
+              <h3>Patient Details</h3>
+              <p>Linked to your login email</p>
+            </div>
+            <div class="clean-card-body">
+              <div class="clean-row"><span class="k">Full Name</span><input type="text" class="v" id="viewName" disabled></div>
+              <div class="clean-row"><span class="k">Email</span><input type="text" class="v" id="viewEmail" disabled></div>
+              <div class="clean-row"><span class="k">Date of Birth</span><input type="text" class="v" id="viewDob" disabled></div>
+              <div class="clean-row"><span class="k">Gender</span><input type="text" class="v" id="viewGender" disabled></div>
+              <div class="clean-row"><span class="k">Blood Group</span><input type="text" class="v" id="viewBlood" disabled></div>
+              <div class="clean-row"><span class="k">Registered On</span><input type="text" class="v" id="viewReg" disabled></div>
+
+              <div class="clean-sec">
+                <div class="clean-sec-title">Edit Contact Details</div>
+                <div class="clean-2col">
+                  <div class="clean-field">
                     <label>Phone Number *</label>
                     <input type="tel" id="editPhone" required>
                     <span class="form-error">Valid phone number is required.</span>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Address</label>
                     <input type="text" id="editAddress" placeholder="Street address">
                   </div>
                 </div>
               </div>
             </div>
-            <div class="lux-card-foot">
-              <button type="button" class="btn-sapphire" id="saveBtn" onclick="saveProfile()">Save Changes</button>
+            <div class="clean-card-foot">
+              <button type="button" class="btn-teal" id="saveBtn" onclick="saveProfile()">Save Changes</button>
             </div>
           </div>
 
-          <div class="lux-side">
-            <div class="lux-card lux-acct">
-              <div class="lux-card-head"><div><h3>Your Account</h3></div></div>
-              <div class="lux-card-body">
-                <p class="lux-note">Signed in as <b id="accountEmail">—</b><br>Role: <b>Patient</b><br>Only you can see this record. Hospital staff see it when they treat you.</p>
-                <a href="my-appointments.html" class="btn-ghost-light">View My Appointments →</a>
+          <div class="clean-side">
+            <div class="clean-card clean-acct">
+              <div class="clean-card-head"><h3>Your Account</h3></div>
+              <div class="clean-card-body">
+                <p class="clean-note">Signed in as <b id="accountEmail">—</b><br>Role: <b>Patient</b><br>Only you can see this record. Hospital staff see it when they treat you.</p>
+                <a href="my-appointments.html" class="btn-link-teal">View My Appointments →</a>
               </div>
             </div>
-            <div class="lux-card">
-              <div class="lux-card-head"><div><h3>At a Glance</h3><p>Your care, in one place</p></div></div>
-              <div class="lux-card-body">
-                <div class="lux-chip-row">
-                  <span class="lux-chip" id="chipBlood">Blood: —</span>
-                  <span class="lux-chip" id="chipGender">—</span>
-                  <span class="lux-chip">Patient</span>
+            <div class="clean-card">
+              <div class="clean-card-head"><h3>At a Glance</h3><p>Your care, in one place</p></div>
+              <div class="clean-card-body">
+                <div class="clean-chip-row">
+                  <span class="clean-chip" id="chipBlood">Blood: —</span>
+                  <span class="clean-chip" id="chipGender">—</span>
+                  <span class="clean-chip">Patient</span>
                 </div>
-                <p class="lux-note" style="margin-top:14px;">Keep your phone number updated so the hospital can reach you for appointment reminders.</p>
+                <p class="clean-note" style="margin-top:14px;">Keep your phone number updated so the hospital can reach you for appointment reminders.</p>
               </div>
             </div>
           </div>
@@ -148,37 +153,35 @@
 
       <!-- No profile yet: create it -->
       <div id="createWrap" style="display:none;">
-        <div class="lux-hero">
-          <div class="lux-hero-in">
-            <div class="lux-avatar">✦</div>
-            <div>
-              <h2>Complete Your Profile</h2>
-              <div class="sub">One-time setup — your patient record is created from these details</div>
-            </div>
+        <div class="clean-hero">
+          <div class="clean-avatar">✦</div>
+          <div>
+            <h2>Complete Your Profile</h2>
+            <div class="sub">One-time setup — your patient record is created from these details</div>
           </div>
         </div>
-        <div class="lux-grid">
-          <div class="lux-card">
-            <div class="lux-card-head"><div><h3>Personal Details</h3><p>Fill in once — this becomes your patient record</p></div></div>
-            <div class="lux-card-body">
+        <div class="clean-grid">
+          <div class="clean-card">
+            <div class="clean-card-head"><h3>Personal Details</h3><p>Fill in once — this becomes your patient record</p></div>
+            <div class="clean-card-body">
               <form id="createForm" novalidate>
-                <div class="lux-2col">
-                  <div class="lux-field">
+                <div class="clean-2col">
+                  <div class="clean-field">
                     <label>First Name *</label>
                     <input type="text" id="firstName" required>
                     <span class="form-error">First name is required.</span>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Last Name *</label>
                     <input type="text" id="lastName" required>
                     <span class="form-error">Last name is required.</span>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Date of Birth *</label>
                     <input type="date" id="dob" required>
                     <span class="form-error">Date of birth is required.</span>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Gender *</label>
                     <select id="gender" required>
                       <option value="">Select gender</option>
@@ -186,7 +189,7 @@
                     </select>
                     <span class="form-error">Please select a gender.</span>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Blood Group</label>
                     <select id="bloodGroup">
                       <option value="">Select blood group</option>
@@ -194,28 +197,28 @@
                       <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
                     </select>
                   </div>
-                  <div class="lux-field">
+                  <div class="clean-field">
                     <label>Phone Number *</label>
                     <input type="tel" id="phone" placeholder="e.g. 9876543210" required>
                     <span class="form-error">Valid phone number is required.</span>
                   </div>
                 </div>
-                <div class="lux-field">
+                <div class="clean-field">
                   <label>Email Address</label>
                   <input type="email" id="email" disabled>
                 </div>
               </form>
             </div>
-            <div class="lux-card-foot">
-              <button type="button" class="btn-sapphire" id="createBtn" onclick="createProfile()">Create My Profile</button>
+            <div class="clean-card-foot">
+              <button type="button" class="btn-teal" id="createBtn" onclick="createProfile()">Create My Profile</button>
             </div>
           </div>
 
-          <div class="lux-side">
-            <div class="lux-card">
-              <div class="lux-card-head"><div><h3>Why is this needed?</h3></div></div>
-              <div class="lux-card-body">
-                <p class="lux-note">Appointments are booked against a patient record. Your login email links your account to that record, so your bookings stay yours.</p>
+          <div class="clean-side">
+            <div class="clean-card">
+              <div class="clean-card-head"><h3>Why is this needed?</h3></div>
+              <div class="clean-card-body">
+                <p class="clean-note">Appointments are booked against a patient record. Your login email links your account to that record, so your bookings stay yours.</p>
               </div>
             </div>
           </div>
@@ -253,12 +256,16 @@
       document.getElementById('viewReg').value = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
       document.getElementById('editPhone').value = myPatient.phone || '';
       document.getElementById('editAddress').value = myPatient.address || '';
-      // Luxury hero
+      // Hero + stat cards
       document.getElementById('heroName').textContent = fullName;
       document.getElementById('heroEmail').textContent = myPatient.email || email;
       document.getElementById('avatarInitial').textContent = (fullName || 'G').trim().charAt(0).toUpperCase();
       document.getElementById('heroSince').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
       document.getElementById('heroBlood').textContent = myPatient.blood_group || '—';
+      document.getElementById('statBlood').textContent = myPatient.blood_group || '—';
+      document.getElementById('statGender').textContent = myPatient.gender || '—';
+      document.getElementById('statDob').textContent = myPatient.date_of_birth || '—';
+      document.getElementById('statSince').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
       document.getElementById('chipBlood').textContent = 'Blood: ' + (myPatient.blood_group || '—');
       document.getElementById('chipGender').textContent = myPatient.gender || '—';
       document.getElementById('profileWrap').style.display = 'block';
