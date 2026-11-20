@@ -7,63 +7,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
-    /* ---------- My Profile — Full Page (approved demo: light airy, blue accent) ---------- */
-    body.profile-final { background: #f4f7fb; }
+    /* ---------- My Profile — Midnight Navy (whole-project theme) ---------- */
+    body.profile-final { background: #0a1128; }
     body.profile-final .page-content { background: transparent; }
-    /* White sidebar on this page only (matches the approved demo) */
-    body.profile-final .sidebar { background: #fff; border-right: 1px solid #e2e8f0; box-shadow: none; }
-    body.profile-final .sidebar-header { border-bottom: 1px solid #f1f5f9; }
-    body.profile-final .sidebar-brand-name { color: #0f172a; }
-    body.profile-final .sidebar-brand-name span { color: #2563eb; }
-    body.profile-final .nav-group-label { color: #94a3b8; }
-    body.profile-final .nav-item { color: #475569; }
-    body.profile-final .nav-item:hover { background: #f1f5f9; color: #0f172a; }
-    body.profile-final .nav-item.active { background: #eff6ff; color: #1d4ed8; box-shadow: none; }
-    body.profile-final .nav-item.active .nav-icon { color: #2563eb; }
-    body.profile-final .sidebar-footer { border-top: 1px solid #f1f5f9; }
-    body.profile-final .sidebar-user:hover { background: #f1f5f9; }
-    body.profile-final .sidebar-user-name { color: #0f172a; }
-    body.profile-final .sidebar-user-role { color: #64748b; }
-    body.profile-final .sidebar-collapse-btn { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
     /* Cover banner + profile bar */
-    .pf-cover { height: 150px; border-radius: 20px 20px 0 0; background: linear-gradient(120deg, #1e40af 0%, #2563eb 55%, #38bdf8 100%); }
-    .pf-profile-bar { background: #fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 20px 20px; padding: 0 28px 22px; display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); margin-bottom: 16px; }
-    .pf-avatar { width: 112px; height: 112px; border-radius: 50%; flex: 0 0 112px; margin-top: -56px; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 4px solid #fff; box-shadow: 0 8px 24px rgba(29, 78, 216, .35); }
-    .pf-identity h2 { font-size: 26px; font-weight: 800; color: #0f172a; margin: 0 0 3px; letter-spacing: -.2px; }
-    .pf-email { color: #64748b; font-size: 13.5px; }
-    .pf-pid { display: inline-block; margin-top: 9px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: #1d4ed8; background: #dbeafe; border-radius: 999px; padding: 5px 12px; }
+    .pf-cover { height: 150px; border-radius: 20px 20px 0 0; background: linear-gradient(120deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); }
+    .pf-profile-bar { background: #101d42; border: 1px solid rgba(255,255,255,.08); border-top: none; border-radius: 0 0 20px 20px; padding: 0 28px 22px; display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); margin-bottom: 16px; }
+    .pf-avatar { width: 112px; height: 112px; border-radius: 50%; flex: 0 0 112px; margin-top: -56px; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 4px solid #101d42; box-shadow: 0 8px 24px rgba(29, 78, 216, .35); }
+    .pf-identity h2 { font-size: 26px; font-weight: 800; color: #f1f5f9; margin: 0 0 3px; letter-spacing: -.2px; }
+    .pf-email { color: #94a3b8; font-size: 13.5px; }
+    .pf-pid { display: inline-block; margin-top: 9px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: #93c5fd; background: rgba(59,130,246,.20); border-radius: 999px; padding: 5px 12px; }
     .pf-ring-wrap { margin-left: auto; display: flex; align-items: center; gap: 16px; }
     .pf-ring { position: relative; width: 92px; height: 92px; flex: 0 0 92px; }
     .pf-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .pf-ring-center b { font-size: 20px; font-weight: 800; color: #1d4ed8; line-height: 1.1; }
-    .pf-ring-center span { font-size: 9.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; }
+    .pf-ring-center b { font-size: 20px; font-weight: 800; color: #60a5fa; line-height: 1.1; }
+    .pf-ring-center span { font-size: 9.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #94a3b8; }
     .pf-ring-side { text-align: left; }
-    .pf-ring-side .t { font-size: 13px; font-weight: 700; color: #0f172a; }
-    .pf-ring-side .s { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.5; }
+    .pf-ring-side .t { font-size: 13px; font-weight: 700; color: #f1f5f9; }
+    .pf-ring-side .s { font-size: 12px; color: #94a3b8; margin-top: 2px; line-height: 1.5; }
     .pf-complete-btn { margin-top: 8px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; font-weight: 700; font-size: 12.5px; border-radius: 10px; padding: 9px 14px; cursor: pointer; box-shadow: 0 6px 16px rgba(37, 99, 235, .30); }
     .pf-complete-btn:hover { filter: brightness(1.06); }
     /* Stat cards */
     .pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
-    .pf-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(15, 23, 42, .04); }
-    .pf-stat .k { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-    .pf-stat .v { font-size: 19px; font-weight: 800; color: #0f172a; }
-    .pf-stat .v.blue { color: #2563eb; }
+    .pf-stat { background: #101d42; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(0, 0, 0, .30); }
+    .pf-stat .k { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px; }
+    .pf-stat .v { font-size: 19px; font-weight: 800; color: #f1f5f9; }
+    .pf-stat .v.blue { color: #60a5fa; }
     /* Grid + cards */
     .pf-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
-    .pf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); overflow: hidden; }
-    .pf-card-head { padding: 18px 22px 14px; border-bottom: 1px solid #eef2f7; }
-    .pf-card-head h3 { font-size: 17px; font-weight: 800; color: #0f172a; margin: 0; }
-    .pf-card-head p { margin: 3px 0 0; font-size: 12.5px; color: #64748b; }
+    .pf-card { background: #101d42; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; box-shadow: 0 6px 24px rgba(0, 0, 0, .30); overflow: hidden; }
+    .pf-card-head { padding: 18px 22px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .pf-card-head h3 { font-size: 17px; font-weight: 800; color: #f1f5f9; margin: 0; }
+    .pf-card-head p { margin: 3px 0 0; font-size: 12.5px; color: #94a3b8; }
     .pf-card-body { padding: 14px 22px 20px; }
     .pf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .pf-field { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 12px 14px; }
-    .pf-field .k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
-    .pf-field .v { font-size: 14.5px; font-weight: 700; color: #0f172a; word-break: break-word; }
-    .pf-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #e2e8f0; }
-    .pf-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #2563eb; margin-bottom: 6px; }
-    .pf-input-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; margin: 12px 0 6px; }
-    .pf-input-field input, .pf-input-field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #0f172a; background: #fff; outline: none; }
-    .pf-input-field input:focus, .pf-input-field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+    .pf-field { background: #0d1b3e; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 12px 14px; }
+    .pf-field .k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; }
+    .pf-field .v { font-size: 14.5px; font-weight: 700; color: #f1f5f9; word-break: break-word; }
+    .pf-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,.12); }
+    .pf-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #60a5fa; margin-bottom: 6px; }
+    .pf-input-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #94a3b8; margin: 12px 0 6px; }
+    .pf-input-field input, .pf-input-field select { width: 100%; border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #f1f5f9; background: #0d1b3e; outline: none; }
+    .pf-input-field input:focus, .pf-input-field select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, .25); }
     .pf-input-field input.is-invalid, .pf-input-field select.is-invalid { border-color: #dc2626; }
     .pf-input-field .form-error { display: none; color: #dc2626; font-size: 12px; margin-top: 5px; }
     .pf-input-field input.is-invalid + .form-error, .pf-input-field select.is-invalid + .form-error { display: block; }
@@ -73,14 +58,14 @@
     .btn-blue:hover { filter: brightness(1.06); }
     .btn-blue:disabled { opacity: .6; cursor: not-allowed; }
     .pf-side { display: flex; flex-direction: column; gap: 16px; }
-    .pf-note { font-size: 13px; color: #475569; line-height: 1.85; }
-    .pf-note b { color: #0f172a; }
+    .pf-note { font-size: 13px; color: #cbd5e1; line-height: 1.85; }
+    .pf-note b { color: #f1f5f9; }
     .pf-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .pf-chip { font-size: 12px; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 999px; padding: 6px 11px; }
-    .pf-link { display: inline-block; margin-top: 12px; border: 1.5px solid #2563eb; color: #1d4ed8; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .pf-link:hover { background: #eff6ff; }
-    .pf-next b { display: block; font-size: 15px; font-weight: 800; color: #0f172a; }
-    .pf-next span { display: block; font-size: 13px; color: #64748b; margin-top: 3px; }
+    .pf-chip { font-size: 12px; font-weight: 700; color: #93c5fd; background: rgba(59,130,246,.16); border: 1px solid rgba(59,130,246,.30); border-radius: 999px; padding: 6px 11px; }
+    .pf-link { display: inline-block; margin-top: 12px; border: 1.5px solid #3b82f6; color: #60a5fa; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .pf-link:hover { background: rgba(59,130,246,.12); }
+    .pf-next b { display: block; font-size: 15px; font-weight: 800; color: #f1f5f9; }
+    .pf-next span { display: block; font-size: 13px; color: #94a3b8; margin-top: 3px; }
     .pf-next .pf-chip { display: inline-block; margin-top: 8px; }
     @media (max-width: 900px) { .pf-grid { grid-template-columns: 1fr; } .pf-stats { grid-template-columns: 1fr 1fr; } .pf-ring-wrap { margin-left: 0; } .pf-fields { grid-template-columns: 1fr; } }
   </style>
@@ -105,7 +90,7 @@
           <div class="pf-ring-wrap">
             <div class="pf-ring">
               <svg width="92" height="92" viewBox="0 0 92 92">
-                <circle cx="46" cy="46" r="40" fill="none" stroke="#e2e8f0" stroke-width="8"/>
+                <circle cx="46" cy="46" r="40" fill="none" stroke="#22315c" stroke-width="8"/>
                 <circle id="ringArc" cx="46" cy="46" r="40" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3" transform="rotate(-90 46 46)"/>
               </svg>
               <div class="pf-ring-center"><b id="ringPct">—</b><span>Complete</span></div>
@@ -250,7 +235,7 @@
                 </div>
               </form>
             </div>
-            <div class="pf-card-body" style="border-top:1px solid #eef2f7; background:#f8fafc; border-radius:0 0 18px 18px; display:flex; justify-content:flex-end;">
+            <div class="pf-card-body" style="border-top:1px solid rgba(255,255,255,.08); background:#0d1b3e; border-radius:0 0 18px 18px; display:flex; justify-content:flex-end;">
               <button type="button" class="btn-blue" id="createBtn" onclick="createProfile()">Create My Profile</button>
             </div>
           </div>

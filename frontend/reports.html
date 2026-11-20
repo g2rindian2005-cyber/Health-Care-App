@@ -78,7 +78,7 @@
   Chart.defaults.font.family = 'Inter';
   Chart.defaults.color = '#6b7280';
 
-  const doughnutOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
+  const doughnutOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } } };
 
   (async () => {
     const [patients, bills, dues, diseases, doctors, payments] = await Promise.all([
@@ -104,19 +104,19 @@
       buckets.push({ key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }), total: 0 });
     }
     billList.forEach(b => { if (!b.bill_date) return; const bk = buckets.find(x => x.key === String(b.bill_date).slice(0, 7)); if (bk) bk.total += Number(b.net_amount || 0); });
-    new Chart(document.getElementById('revMonthChart'), { type: 'bar', data: { labels: buckets.map(b => b.label), datasets: [{ label: 'Revenue (₹)', data: buckets.map(b => b.total), backgroundColor: 'rgba(37,99,235,0.15)', borderColor: '#2563eb', borderWidth: 2, borderRadius: 6, borderSkipped: false }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ₹' + Number(ctx.raw).toLocaleString('en-IN') } } }, scales: { x: { grid: { display: false }, border: { display: false } }, y: { grid: { color: '#f3f4f6' }, border: { display: false }, ticks: { callback: v => '₹' + (v / 1000) + 'k' } } } } });
+    new Chart(document.getElementById('revMonthChart'), { type: 'bar', data: { labels: buckets.map(b => b.label), datasets: [{ label: 'Revenue (₹)', data: buckets.map(b => b.total), backgroundColor: 'rgba(37,99,235,0.15)', borderColor: '#2563eb', borderWidth: 2, borderRadius: 6, borderSkipped: false }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ₹' + Number(ctx.raw).toLocaleString('en-IN') } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8' } }, y: { grid: { color: 'rgba(255,255,255,.08)' }, border: { display: false }, ticks: { color: '#94a3b8', callback: v => '₹' + (v / 1000) + 'k' } } } } });
 
     /* Bills by status */
     const byStatus = s => billList.filter(b => b.status === s).length;
-    new Chart(document.getElementById('billsStatusChart'), { type: 'doughnut', data: { labels: ['Paid', 'Partial', 'Pending'], datasets: [{ data: [byStatus('Paid'), byStatus('Partial'), byStatus('Pending')], backgroundColor: ['#059669', '#d97706', '#dc2626'], borderWidth: 2, borderColor: '#fff' }] }, options: doughnutOpts });
+    new Chart(document.getElementById('billsStatusChart'), { type: 'doughnut', data: { labels: ['Paid', 'Partial', 'Pending'], datasets: [{ data: [byStatus('Paid'), byStatus('Partial'), byStatus('Pending')], backgroundColor: ['#059669', '#d97706', '#dc2626'], borderWidth: 2, borderColor: '#101d42' }] }, options: doughnutOpts });
 
     /* Diseases by severity */
     const sevs = ['Mild', 'Moderate', 'Severe', 'Critical'];
-    new Chart(document.getElementById('severityChart'), { type: 'doughnut', data: { labels: sevs, datasets: [{ data: sevs.map(s => diseaseList.filter(d => d.severity === s).length), backgroundColor: ['#0d9488', '#d97706', '#dc2626', '#7c3aed'], borderWidth: 2, borderColor: '#fff' }] }, options: doughnutOpts });
+    new Chart(document.getElementById('severityChart'), { type: 'doughnut', data: { labels: sevs, datasets: [{ data: sevs.map(s => diseaseList.filter(d => d.severity === s).length), backgroundColor: ['#0d9488', '#d97706', '#dc2626', '#7c3aed'], borderWidth: 2, borderColor: '#101d42' }] }, options: doughnutOpts });
 
     /* Doctors by availability */
     const avails = ['Available', 'Busy', 'On Leave'];
-    new Chart(document.getElementById('doctorAvailChart'), { type: 'doughnut', data: { labels: avails, datasets: [{ data: avails.map(a => doctorList.filter(d => d.availability === a).length), backgroundColor: ['#059669', '#d97706', '#6b7280'], borderWidth: 2, borderColor: '#fff' }] }, options: doughnutOpts });
+    new Chart(document.getElementById('doctorAvailChart'), { type: 'doughnut', data: { labels: avails, datasets: [{ data: avails.map(a => doctorList.filter(d => d.availability === a).length), backgroundColor: ['#059669', '#d97706', '#6b7280'], borderWidth: 2, borderColor: '#101d42' }] }, options: doughnutOpts });
 
     /* Printable summary table */
     const collected = (payments?.payments || []).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
