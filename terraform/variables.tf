@@ -12,6 +12,14 @@ variable "project_name" {
   description = "Project prefix used in resource names"
   type        = string
   default     = "hospital"
+
+  # Only one deployment may exist: changing project_name creates a
+  # second copy of EVERYTHING (second S3 bucket, CloudFront, API,
+  # Lambdas, Cognito pool, DynamoDB tables). Keep it "hospital".
+  validation {
+    condition     = var.project_name == "hospital"
+    error_message = "project_name must be \"hospital\" — changing it creates a second deployment (second S3 bucket, CloudFront, API, Lambdas, Cognito pool). Keep one deployment only."
+  }
 }
 
 variable "environment" {
