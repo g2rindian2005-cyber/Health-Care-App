@@ -117,7 +117,7 @@
 <script src="../js/config.js"></script>
 <script src="../js/api.js"></script>
 <script src="../js/upi-qr.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../js/qrcode.min.js"></script>
 <script>
   initApp({ page: 'appointment-confirm', title: 'Appointment Confirmation', subtitle: 'My Care' });
 
@@ -224,10 +224,22 @@
   function makeQR() {
     const box = document.getElementById('qrBox');
     box.innerHTML = '';
+    hide('qrFallback');
+    let ok = false;
     if (typeof QRCode !== 'undefined') {
-      new QRCode(box, { text: qrText, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+      try {
+        new QRCode(box, { text: qrText, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+        // verify the QR actually drew (canvas or img present with size)
+        const drawn = box.querySelector('canvas, img');
+        ok = !!(drawn && (drawn.width > 0 || drawn.naturalWidth > 0 || drawn.offsetWidth > 0));
+      } catch (e) {
+        ok = false;
+      }
+    }
+    if (ok) {
       show('downloadQrBtn');
     } else {
+      // library missing OR QR build failed — never leave an empty white box
       hide('qrBox');
       document.getElementById('qrFallbackText').textContent = qrText;
       show('qrFallback');
