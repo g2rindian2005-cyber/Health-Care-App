@@ -125,7 +125,7 @@
     document.querySelectorAll('img[data-upi-qr]').forEach(im => { im.src = UPI_QR_DATA_URL; });
   }
 
-  let asgId = null, billId = null, asg = null, doctor = null, patient = null, qrText = '';
+  let asgId = null, billId = null, asg = null, doctor = null, patient = null, qrText = '', qrFallbackText = '';
 
   function parsePayment(notes) {
     const out = { method: '—', fee: '—', feeNum: 0, txn: '', reason: '' };
@@ -196,7 +196,8 @@
     document.getElementById('upiPayLater').style.display = showUpiLater ? 'block' : 'none';
     if (showUpiLater) document.getElementById('upiLaterFee').textContent = pay.fee;
 
-    qrText = [
+    // Details text (shown if the QR cannot be drawn)
+    var detailsText = [
       'HealtheCare Appointment',
       `Booking ID: HCA-${asg.assignment_id}`,
       `Patient: ${patName} (PID ${asg.patient_id})`,
@@ -205,6 +206,20 @@
       `Status: ${asg.status}`,
       `Fee: ${pay.fee} | Payment: ${pay.method}`,
     ].join('\n');
+    // QR encodes a LINK to the public appointment card — scanning opens the card.
+    var cardParams = new URLSearchParams({
+      b: 'HCA-' + asg.assignment_id,
+      n: patName,
+      pid: String(asg.patient_id),
+      d: docName,
+      dt: dateStr,
+      s: asg.status,
+      f: pay.fee,
+      m: pay.method,
+      txn: pay.txn || ''
+    });
+    qrText = window.location.origin + '/appointment-card.html?' + cardParams.toString();
+    qrFallbackText = detailsText;
 
     if (asg.status === 'Scheduled') {
       show('confirmStep');
@@ -241,7 +256,7 @@
     } else {
       // library missing OR QR build failed — never leave an empty white box
       hide('qrBox');
-      document.getElementById('qrFallbackText').textContent = qrText;
+      document.getElementById('qrFallbackText').textContent = qrFallbackText || qrText;
       show('qrFallback');
     }
   }
