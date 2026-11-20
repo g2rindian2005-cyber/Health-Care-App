@@ -7,144 +7,184 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
-    /* ---------- My Profile — Light Clean (approved demo) ---------- */
-    body.clean { background: #f2f6fb; }
-    body.clean .page-content { background: transparent; }
-    .clean-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 26px 28px; box-shadow: 0 6px 24px rgba(15, 23, 42, .06); margin-bottom: 16px; }
-    .clean-avatar { width: 88px; height: 88px; border-radius: 50%; flex: 0 0 88px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #14b8a6, #0d9488); box-shadow: 0 8px 20px rgba(13, 148, 136, .35); }
-    .clean-hero h2 { font-size: 26px; font-weight: 800; color: #0f172a; margin: 0 0 3px; letter-spacing: -.2px; }
-    .clean-hero .sub { color: #64748b; font-size: 13.5px; }
-    .clean-pid { display: inline-block; margin-top: 9px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 5px 12px; }
-    .clean-hero-side { margin-left: auto; text-align: right; color: #64748b; font-size: 13px; line-height: 1.9; }
-    .clean-hero-side b { color: #0f766e; }
-    .clean-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
-    .clean-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(15, 23, 42, .04); }
-    .clean-stat .k { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-    .clean-stat .v { font-size: 19px; font-weight: 800; color: #0f172a; }
-    .clean-stat .v.teal { color: #0d9488; }
-    .clean-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
-    .clean-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); overflow: hidden; }
-    .clean-card-head { padding: 18px 22px 14px; border-bottom: 1px solid #eef2f7; }
-    .clean-card-head h3 { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }
-    .clean-card-head p { margin: 3px 0 0; font-size: 12.5px; color: #64748b; }
-    .clean-card-body { padding: 6px 22px 20px; }
-    .clean-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid #f1f5f9; }
-    .clean-row:last-child { border-bottom: none; }
-    .clean-row .k { font-size: 11.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: #64748b; }
-    .clean-row .v { font-size: 15px; font-weight: 600; color: #0f172a; text-align: right; }
-    .clean-row input.v { border: none; background: transparent; font-size: 15px; font-weight: 600; color: #0f172a; text-align: right; padding: 0; width: 60%; outline: none; }
-    .clean-row input.v:disabled { color: #0f172a; -webkit-text-fill-color: #0f172a; opacity: 1; }
-    .clean-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #e2e8f0; }
-    .clean-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #0d9488; margin-bottom: 6px; }
-    .clean-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; margin: 12px 0 6px; }
-    .clean-field input, .clean-field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #0f172a; background: #fff; outline: none; }
-    .clean-field input:focus, .clean-field select:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, .15); }
-    .clean-field input.is-invalid, .clean-field select.is-invalid { border-color: #dc2626; }
-    .clean-field .form-error { display: none; color: #dc2626; font-size: 12px; margin-top: 5px; }
-    .clean-field input.is-invalid + .form-error, .clean-field select.is-invalid + .form-error { display: block; }
-    .clean-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .clean-card-foot { padding: 16px 22px; border-top: 1px solid #eef2f7; background: #f8fafc; display: flex; justify-content: flex-end; }
-    .btn-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff; border: none; font-weight: 800; letter-spacing: .3px; border-radius: 12px; padding: 12px 22px; cursor: pointer; box-shadow: 0 8px 20px rgba(13, 148, 136, .30); }
-    .btn-teal:hover { filter: brightness(1.06); }
-    .btn-teal:disabled { opacity: .6; cursor: not-allowed; }
-    .clean-side { display: flex; flex-direction: column; gap: 16px; }
-    .clean-note { font-size: 13px; color: #475569; line-height: 1.85; }
-    .clean-note b { color: #0f172a; }
-    .clean-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .clean-chip { font-size: 12px; font-weight: 700; color: #0f766e; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 999px; padding: 6px 11px; }
-    .clean-acct { border-top: 3px solid #0d9488; }
-    .btn-link-teal { display: inline-block; margin-top: 12px; border: 1.5px solid #0d9488; color: #0f766e; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .btn-link-teal:hover { background: #f0fdfa; }
-    @media (max-width: 900px) { .clean-grid { grid-template-columns: 1fr; } .clean-stats { grid-template-columns: 1fr 1fr; } .clean-hero-side { margin-left: 0; text-align: left; } }
+    /* ---------- My Profile — Full Page (approved demo: light airy, blue accent) ---------- */
+    body.profile-final { background: #f4f7fb; }
+    body.profile-final .page-content { background: transparent; }
+    /* White sidebar on this page only (matches the approved demo) */
+    body.profile-final .sidebar { background: #fff; border-right: 1px solid #e2e8f0; box-shadow: none; }
+    body.profile-final .sidebar-header { border-bottom: 1px solid #f1f5f9; }
+    body.profile-final .sidebar-brand-name { color: #0f172a; }
+    body.profile-final .sidebar-brand-name span { color: #2563eb; }
+    body.profile-final .nav-group-label { color: #94a3b8; }
+    body.profile-final .nav-item { color: #475569; }
+    body.profile-final .nav-item:hover { background: #f1f5f9; color: #0f172a; }
+    body.profile-final .nav-item.active { background: #eff6ff; color: #1d4ed8; box-shadow: none; }
+    body.profile-final .nav-item.active .nav-icon { color: #2563eb; }
+    body.profile-final .sidebar-footer { border-top: 1px solid #f1f5f9; }
+    body.profile-final .sidebar-user:hover { background: #f1f5f9; }
+    body.profile-final .sidebar-user-name { color: #0f172a; }
+    body.profile-final .sidebar-user-role { color: #64748b; }
+    body.profile-final .sidebar-collapse-btn { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
+    /* Cover banner + profile bar */
+    .pf-cover { height: 150px; border-radius: 20px 20px 0 0; background: linear-gradient(120deg, #1e40af 0%, #2563eb 55%, #38bdf8 100%); }
+    .pf-profile-bar { background: #fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 20px 20px; padding: 0 28px 22px; display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); margin-bottom: 16px; }
+    .pf-avatar { width: 112px; height: 112px; border-radius: 50%; flex: 0 0 112px; margin-top: -56px; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 4px solid #fff; box-shadow: 0 8px 24px rgba(29, 78, 216, .35); }
+    .pf-identity h2 { font-size: 26px; font-weight: 800; color: #0f172a; margin: 0 0 3px; letter-spacing: -.2px; }
+    .pf-email { color: #64748b; font-size: 13.5px; }
+    .pf-pid { display: inline-block; margin-top: 9px; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: #1d4ed8; background: #dbeafe; border-radius: 999px; padding: 5px 12px; }
+    .pf-ring-wrap { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+    .pf-ring { position: relative; width: 92px; height: 92px; flex: 0 0 92px; }
+    .pf-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .pf-ring-center b { font-size: 20px; font-weight: 800; color: #1d4ed8; line-height: 1.1; }
+    .pf-ring-center span { font-size: 9.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; }
+    .pf-ring-side { text-align: left; }
+    .pf-ring-side .t { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .pf-ring-side .s { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.5; }
+    .pf-complete-btn { margin-top: 8px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; font-weight: 700; font-size: 12.5px; border-radius: 10px; padding: 9px 14px; cursor: pointer; box-shadow: 0 6px 16px rgba(37, 99, 235, .30); }
+    .pf-complete-btn:hover { filter: brightness(1.06); }
+    /* Stat cards */
+    .pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+    .pf-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(15, 23, 42, .04); }
+    .pf-stat .k { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+    .pf-stat .v { font-size: 19px; font-weight: 800; color: #0f172a; }
+    .pf-stat .v.blue { color: #2563eb; }
+    /* Grid + cards */
+    .pf-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
+    .pf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 6px 24px rgba(15, 23, 42, .05); overflow: hidden; }
+    .pf-card-head { padding: 18px 22px 14px; border-bottom: 1px solid #eef2f7; }
+    .pf-card-head h3 { font-size: 17px; font-weight: 800; color: #0f172a; margin: 0; }
+    .pf-card-head p { margin: 3px 0 0; font-size: 12.5px; color: #64748b; }
+    .pf-card-body { padding: 14px 22px 20px; }
+    .pf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pf-field { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 12px 14px; }
+    .pf-field .k { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+    .pf-field .v { font-size: 14.5px; font-weight: 700; color: #0f172a; word-break: break-word; }
+    .pf-sec { margin-top: 18px; padding-top: 16px; border-top: 1px dashed #e2e8f0; }
+    .pf-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #2563eb; margin-bottom: 6px; }
+    .pf-input-field label { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #64748b; margin: 12px 0 6px; }
+    .pf-input-field input, .pf-input-field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; color: #0f172a; background: #fff; outline: none; }
+    .pf-input-field input:focus, .pf-input-field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+    .pf-input-field input.is-invalid, .pf-input-field select.is-invalid { border-color: #dc2626; }
+    .pf-input-field .form-error { display: none; color: #dc2626; font-size: 12px; margin-top: 5px; }
+    .pf-input-field input.is-invalid + .form-error, .pf-input-field select.is-invalid + .form-error { display: block; }
+    .pf-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .pf-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+    .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; font-weight: 800; letter-spacing: .3px; border-radius: 12px; padding: 12px 22px; cursor: pointer; box-shadow: 0 8px 20px rgba(37, 99, 235, .30); }
+    .btn-blue:hover { filter: brightness(1.06); }
+    .btn-blue:disabled { opacity: .6; cursor: not-allowed; }
+    .pf-side { display: flex; flex-direction: column; gap: 16px; }
+    .pf-note { font-size: 13px; color: #475569; line-height: 1.85; }
+    .pf-note b { color: #0f172a; }
+    .pf-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .pf-chip { font-size: 12px; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 999px; padding: 6px 11px; }
+    .pf-link { display: inline-block; margin-top: 12px; border: 1.5px solid #2563eb; color: #1d4ed8; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .pf-link:hover { background: #eff6ff; }
+    .pf-next b { display: block; font-size: 15px; font-weight: 800; color: #0f172a; }
+    .pf-next span { display: block; font-size: 13px; color: #64748b; margin-top: 3px; }
+    .pf-next .pf-chip { display: inline-block; margin-top: 8px; }
+    @media (max-width: 900px) { .pf-grid { grid-template-columns: 1fr; } .pf-stats { grid-template-columns: 1fr 1fr; } .pf-ring-wrap { margin-left: 0; } .pf-fields { grid-template-columns: 1fr; } }
   </style>
 </head>
-<body class="clean">
+<body class="profile-final">
 <div class="app-layout">
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main-content">
     <header class="topbar" id="topbar"></header>
     <div class="page-content fade-in">
 
-      <div class="page-header">
-        <div class="page-header-left">
-          <h1>My Profile</h1>
-          <p>Your patient record linked to this account</p>
-        </div>
-      </div>
-
       <!-- Existing profile -->
       <div id="profileWrap" style="display:none;">
-        <div class="clean-hero">
-          <div class="clean-avatar" id="avatarInitial">G</div>
-          <div>
+        <div class="pf-cover"></div>
+        <div class="pf-profile-bar">
+          <div class="pf-avatar" id="avatarInitial">G</div>
+          <div class="pf-identity">
             <h2 id="heroName">—</h2>
-            <div class="sub" id="heroEmail">—</div>
-            <span class="clean-pid" id="pidBadge">PID-????</span>
+            <div class="pf-email" id="heroEmail">—</div>
+            <span class="pf-pid" id="pidBadge">PID-????</span>
           </div>
-          <div class="clean-hero-side">
-            <div>Member since <b id="heroSince">—</b></div>
-            <div>Blood Group <b id="heroBlood">—</b></div>
+          <div class="pf-ring-wrap">
+            <div class="pf-ring">
+              <svg width="92" height="92" viewBox="0 0 92 92">
+                <circle cx="46" cy="46" r="40" fill="none" stroke="#e2e8f0" stroke-width="8"/>
+                <circle id="ringArc" cx="46" cy="46" r="40" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3" transform="rotate(-90 46 46)"/>
+              </svg>
+              <div class="pf-ring-center"><b id="ringPct">—</b><span>Complete</span></div>
+            </div>
+            <div class="pf-ring-side">
+              <div class="t">Profile Complete</div>
+              <div class="s" id="ringSub">Fill in your details to reach 100%.</div>
+              <button type="button" class="pf-complete-btn" id="completeBtn" onclick="completeProfile()">Complete Profile</button>
+            </div>
           </div>
         </div>
 
-        <div class="clean-stats">
-          <div class="clean-stat"><span class="k">Blood Group</span><span class="v teal" id="statBlood">—</span></div>
-          <div class="clean-stat"><span class="k">Gender</span><span class="v" id="statGender">—</span></div>
-          <div class="clean-stat"><span class="k">Date of Birth</span><span class="v" id="statDob">—</span></div>
-          <div class="clean-stat"><span class="k">Member Since</span><span class="v" id="statSince">—</span></div>
+        <div class="pf-stats">
+          <div class="pf-stat"><span class="k">Blood Group</span><span class="v blue" id="statBlood">—</span></div>
+          <div class="pf-stat"><span class="k">Gender</span><span class="v" id="statGender">—</span></div>
+          <div class="pf-stat"><span class="k">Date of Birth</span><span class="v" id="statDob">—</span></div>
+          <div class="pf-stat"><span class="k">Member Since</span><span class="v" id="statSince">—</span></div>
         </div>
 
-        <div class="clean-grid">
-          <div class="clean-card">
-            <div class="clean-card-head">
+        <div class="pf-grid">
+          <div class="pf-card">
+            <div class="pf-card-head">
               <h3>Patient Details</h3>
               <p>Linked to your login email</p>
             </div>
-            <div class="clean-card-body">
-              <div class="clean-row"><span class="k">Full Name</span><input type="text" class="v" id="viewName" disabled></div>
-              <div class="clean-row"><span class="k">Email</span><input type="text" class="v" id="viewEmail" disabled></div>
-              <div class="clean-row"><span class="k">Date of Birth</span><input type="text" class="v" id="viewDob" disabled></div>
-              <div class="clean-row"><span class="k">Gender</span><input type="text" class="v" id="viewGender" disabled></div>
-              <div class="clean-row"><span class="k">Blood Group</span><input type="text" class="v" id="viewBlood" disabled></div>
-              <div class="clean-row"><span class="k">Registered On</span><input type="text" class="v" id="viewReg" disabled></div>
+            <div class="pf-card-body">
+              <div class="pf-fields">
+                <div class="pf-field"><span class="k">Full Name</span><span class="v" id="viewName">—</span></div>
+                <div class="pf-field"><span class="k">Email</span><span class="v" id="viewEmail">—</span></div>
+                <div class="pf-field"><span class="k">Phone</span><span class="v" id="viewPhone">—</span></div>
+                <div class="pf-field"><span class="k">Date of Birth</span><span class="v" id="viewDob">—</span></div>
+                <div class="pf-field"><span class="k">Gender</span><span class="v" id="viewGender">—</span></div>
+                <div class="pf-field"><span class="k">Blood Group</span><span class="v" id="viewBlood">—</span></div>
+                <div class="pf-field"><span class="k">Registered On</span><span class="v" id="viewReg">—</span></div>
+              </div>
 
-              <div class="clean-sec">
-                <div class="clean-sec-title">Edit Contact Details</div>
-                <div class="clean-2col">
-                  <div class="clean-field">
+              <div class="pf-sec" id="editSection">
+                <div class="pf-sec-title">Edit Contact Details</div>
+                <div class="pf-2col">
+                  <div class="pf-input-field">
                     <label>Phone Number *</label>
                     <input type="tel" id="editPhone" required>
                     <span class="form-error">Valid phone number is required.</span>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Address</label>
                     <input type="text" id="editAddress" placeholder="Street address">
                   </div>
                 </div>
+                <div class="pf-actions">
+                  <button type="button" class="btn-blue" id="saveBtn" onclick="saveProfile()">Save Changes</button>
+                </div>
               </div>
-            </div>
-            <div class="clean-card-foot">
-              <button type="button" class="btn-teal" id="saveBtn" onclick="saveProfile()">Save Changes</button>
             </div>
           </div>
 
-          <div class="clean-side">
-            <div class="clean-card clean-acct">
-              <div class="clean-card-head"><h3>Your Account</h3></div>
-              <div class="clean-card-body">
-                <p class="clean-note">Signed in as <b id="accountEmail">—</b><br>Role: <b>Patient</b><br>Only you can see this record. Hospital staff see it when they treat you.</p>
-                <a href="my-appointments.html" class="btn-link-teal">View My Appointments →</a>
+          <div class="pf-side">
+            <div class="pf-card">
+              <div class="pf-card-head"><h3>Your Account</h3></div>
+              <div class="pf-card-body">
+                <p class="pf-note">Signed in as <b id="accountEmail">—</b><br>Role: <b>Patient</b><br>Only you can see this record. Hospital staff see it when they treat you.</p>
+                <a href="my-appointments.html" class="pf-link">View My Appointments →</a>
               </div>
             </div>
-            <div class="clean-card">
-              <div class="clean-card-head"><h3>At a Glance</h3><p>Your care, in one place</p></div>
-              <div class="clean-card-body">
-                <div class="clean-chip-row">
-                  <span class="clean-chip" id="chipBlood">Blood: —</span>
-                  <span class="clean-chip" id="chipGender">—</span>
-                  <span class="clean-chip">Patient</span>
+            <div class="pf-card">
+              <div class="pf-card-head"><h3>Next Appointment</h3></div>
+              <div class="pf-card-body" id="nextAppt">
+                <p class="pf-note">Loading…</p>
+              </div>
+            </div>
+            <div class="pf-card">
+              <div class="pf-card-head"><h3>At a Glance</h3><p>Your care, in one place</p></div>
+              <div class="pf-card-body">
+                <div class="pf-chip-row">
+                  <span class="pf-chip" id="chipBlood">Blood: —</span>
+                  <span class="pf-chip" id="chipGender">—</span>
+                  <span class="pf-chip">Patient</span>
                 </div>
-                <p class="clean-note" style="margin-top:14px;">Keep your phone number updated so the hospital can reach you for appointment reminders.</p>
+                <p class="pf-note" style="margin-top:14px;">Keep your phone number updated so the hospital can reach you for appointment reminders.</p>
               </div>
             </div>
           </div>
@@ -153,35 +193,36 @@
 
       <!-- No profile yet: create it -->
       <div id="createWrap" style="display:none;">
-        <div class="clean-hero">
-          <div class="clean-avatar">✦</div>
-          <div>
+        <div class="pf-cover"></div>
+        <div class="pf-profile-bar">
+          <div class="pf-avatar">✦</div>
+          <div class="pf-identity">
             <h2>Complete Your Profile</h2>
-            <div class="sub">One-time setup — your patient record is created from these details</div>
+            <div class="pf-email">One-time setup — your patient record is created from these details</div>
           </div>
         </div>
-        <div class="clean-grid">
-          <div class="clean-card">
-            <div class="clean-card-head"><h3>Personal Details</h3><p>Fill in once — this becomes your patient record</p></div>
-            <div class="clean-card-body">
+        <div class="pf-grid">
+          <div class="pf-card">
+            <div class="pf-card-head"><h3>Personal Details</h3><p>Fill in once — this becomes your patient record</p></div>
+            <div class="pf-card-body">
               <form id="createForm" novalidate>
-                <div class="clean-2col">
-                  <div class="clean-field">
+                <div class="pf-2col">
+                  <div class="pf-input-field">
                     <label>First Name *</label>
                     <input type="text" id="firstName" required>
                     <span class="form-error">First name is required.</span>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Last Name *</label>
                     <input type="text" id="lastName" required>
                     <span class="form-error">Last name is required.</span>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Date of Birth *</label>
                     <input type="date" id="dob" required>
                     <span class="form-error">Date of birth is required.</span>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Gender *</label>
                     <select id="gender" required>
                       <option value="">Select gender</option>
@@ -189,7 +230,7 @@
                     </select>
                     <span class="form-error">Please select a gender.</span>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Blood Group</label>
                     <select id="bloodGroup">
                       <option value="">Select blood group</option>
@@ -197,28 +238,28 @@
                       <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
                     </select>
                   </div>
-                  <div class="clean-field">
+                  <div class="pf-input-field">
                     <label>Phone Number *</label>
                     <input type="tel" id="phone" placeholder="e.g. 9876543210" required>
                     <span class="form-error">Valid phone number is required.</span>
                   </div>
                 </div>
-                <div class="clean-field">
+                <div class="pf-input-field">
                   <label>Email Address</label>
                   <input type="email" id="email" disabled>
                 </div>
               </form>
             </div>
-            <div class="clean-card-foot">
-              <button type="button" class="btn-teal" id="createBtn" onclick="createProfile()">Create My Profile</button>
+            <div class="pf-card-body" style="border-top:1px solid #eef2f7; background:#f8fafc; border-radius:0 0 18px 18px; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn-blue" id="createBtn" onclick="createProfile()">Create My Profile</button>
             </div>
           </div>
 
-          <div class="clean-side">
-            <div class="clean-card">
-              <div class="clean-card-head"><h3>Why is this needed?</h3></div>
-              <div class="clean-card-body">
-                <p class="clean-note">Appointments are booked against a patient record. Your login email links your account to that record, so your bookings stay yours.</p>
+          <div class="pf-side">
+            <div class="pf-card">
+              <div class="pf-card-head"><h3>Why is this needed?</h3></div>
+              <div class="pf-card-body">
+                <p class="pf-note">Appointments are booked against a patient record. Your login email links your account to that record, so your bookings stay yours.</p>
               </div>
             </div>
           </div>
@@ -237,6 +278,46 @@
 
   let myPatient = null;
 
+  function updateCompleteness() {
+    if (!myPatient) return;
+    const fields = ['first_name', 'last_name', 'email', 'date_of_birth', 'gender', 'phone', 'address', 'blood_group'];
+    const filled = fields.filter(f => myPatient[f] && String(myPatient[f]).trim()).length;
+    const pct = Math.round((filled / fields.length) * 100);
+    document.getElementById('ringPct').textContent = pct + '%';
+    document.getElementById('ringArc').style.strokeDashoffset = (251.3 * (1 - pct / 100)).toFixed(1);
+    const missing = fields.length - filled;
+    document.getElementById('ringSub').textContent = pct === 100
+      ? 'Your profile is fully complete.'
+      : (missing === 1 ? '1 detail missing — add it to reach 100%.' : missing + ' details missing — add them to reach 100%.');
+    document.getElementById('completeBtn').style.display = pct === 100 ? 'none' : 'inline-block';
+  }
+
+  function completeProfile() {
+    document.getElementById('editSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('editPhone').focus();
+  }
+
+  async function loadNextAppointment(pid) {
+    const box = document.getElementById('nextAppt');
+    try {
+      const data = await DoctorsAPI.forPatient(pid);
+      const list = (data && data.assignments) || [];
+      const now = new Date();
+      const upcoming = list
+        .filter(a => (a.status === 'Scheduled' || a.status === 'Confirmed') && a.appointment_date && new Date(a.appointment_date) >= now)
+        .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))[0];
+      if (upcoming) {
+        const doc = upcoming.doctor_name ? `Dr. ${upcoming.doctor_name}` : 'Doctor';
+        const dt = String(upcoming.appointment_date).slice(0, 16);
+        box.innerHTML = `<div class="pf-next"><b>${doc}</b><span>${dt}</span><span class="pf-chip">${upcoming.status}</span></div><a href="appointment-confirm.html?assignment_id=${upcoming.assignment_id}" class="pf-link">View Appointment →</a>`;
+      } else {
+        box.innerHTML = `<p class="pf-note">No upcoming appointment.</p><a href="book-appointment.html" class="pf-link">Book Appointment →</a>`;
+      }
+    } catch (e) {
+      box.innerHTML = `<p class="pf-note">Could not load appointments.</p><a href="my-appointments.html" class="pf-link">My Appointments →</a>`;
+    }
+  }
+
   async function init() {
     const email = getMyEmail();
     document.getElementById('accountEmail').textContent = email || '—';
@@ -248,27 +329,28 @@
       sessionStorage.setItem('hms_pid', String(myPatient.patient_id));
       document.getElementById('pidBadge').textContent = 'PID-' + String(myPatient.patient_id).padStart(4, '0');
       const fullName = ((myPatient.first_name || '') + ' ' + (myPatient.last_name || '')).trim() || '—';
-      document.getElementById('viewName').value = fullName;
-      document.getElementById('viewEmail').value = myPatient.email || email;
-      document.getElementById('viewDob').value = myPatient.date_of_birth || '—';
-      document.getElementById('viewGender').value = myPatient.gender || '—';
-      document.getElementById('viewBlood').value = myPatient.blood_group || '—';
-      document.getElementById('viewReg').value = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
+      document.getElementById('viewName').textContent = fullName;
+      document.getElementById('viewEmail').textContent = myPatient.email || email;
+      document.getElementById('viewPhone').textContent = myPatient.phone || '—';
+      document.getElementById('viewDob').textContent = myPatient.date_of_birth || '—';
+      document.getElementById('viewGender').textContent = myPatient.gender || '—';
+      document.getElementById('viewBlood').textContent = myPatient.blood_group || '—';
+      document.getElementById('viewReg').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
       document.getElementById('editPhone').value = myPatient.phone || '';
       document.getElementById('editAddress').value = myPatient.address || '';
-      // Hero + stat cards
+      // Hero + stat cards + ring
       document.getElementById('heroName').textContent = fullName;
       document.getElementById('heroEmail').textContent = myPatient.email || email;
       document.getElementById('avatarInitial').textContent = (fullName || 'G').trim().charAt(0).toUpperCase();
-      document.getElementById('heroSince').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
-      document.getElementById('heroBlood').textContent = myPatient.blood_group || '—';
       document.getElementById('statBlood').textContent = myPatient.blood_group || '—';
       document.getElementById('statGender').textContent = myPatient.gender || '—';
       document.getElementById('statDob').textContent = myPatient.date_of_birth || '—';
       document.getElementById('statSince').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
       document.getElementById('chipBlood').textContent = 'Blood: ' + (myPatient.blood_group || '—');
       document.getElementById('chipGender').textContent = myPatient.gender || '—';
+      updateCompleteness();
       document.getElementById('profileWrap').style.display = 'block';
+      loadNextAppointment(myPatient.patient_id);
     } else {
       // Prefill from the account name/email; the patient record is created on submit.
       const name = (localStorage.getItem('hms_user') || sessionStorage.getItem('hms_user') || '').trim();
@@ -286,12 +368,16 @@
     document.getElementById('editPhone').classList.remove('is-invalid');
     const btn = document.getElementById('saveBtn');
     btn.textContent = 'Saving…'; btn.disabled = true;
-    const res = await PatientsAPI.update(myPatient.patient_id, {
-      phone,
-      address: document.getElementById('editAddress').value.trim(),
-    });
+    const address = document.getElementById('editAddress').value.trim();
+    const res = await PatientsAPI.update(myPatient.patient_id, { phone, address });
     btn.textContent = 'Save Changes'; btn.disabled = false;
-    if (res) showToast('Profile updated.', 'success');
+    if (res) {
+      myPatient.phone = phone;
+      myPatient.address = address;
+      document.getElementById('viewPhone').textContent = phone;
+      updateCompleteness();
+      showToast('Profile updated.', 'success');
+    }
   }
 
   async function createProfile() {
