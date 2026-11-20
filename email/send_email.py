@@ -19,7 +19,7 @@ def send_registration_email(to_email, patient_name, patient_id):
     html = _load_template("registration.html")
     html = html.replace("{{patient_name}}", str(patient_name)) \
                .replace("{{patient_id}}", str(patient_id))
-    return send_email(to_email, "Welcome to AWS Hospital Management System", html)
+    return send_email(to_email, "Welcome to Health Care Hospital", html)
 
 
 def send_bill_email(to_email, patient_id, bill_id, description, amount):
@@ -29,7 +29,7 @@ def send_bill_email(to_email, patient_id, bill_id, description, amount):
                .replace("{{bill_id}}", str(bill_id))
                .replace("{{description}}", str(description))
                .replace("{{amount}}", f"{amount:.2f}"))
-    return send_email(to_email, f"New Bill #{bill_id} — AWS Hospital", html)
+    return send_email(to_email, f"New Bill #{bill_id} — Health Care Hospital", html)
 
 
 def send_payment_receipt_email(to_email, payment_id, bill_id, amount):
@@ -38,7 +38,7 @@ def send_payment_receipt_email(to_email, payment_id, bill_id, amount):
     html = (html.replace("{{payment_id}}", str(payment_id))
                .replace("{{bill_id}}", str(bill_id))
                .replace("{{amount}}", f"{amount:.2f}"))
-    return send_email(to_email, f"Payment Receipt — AWS Hospital", html)
+    return send_email(to_email, f"Payment Receipt — Health Care Hospital", html)
 
 
 def send_appointment_email(to_email, patient_id, assignment_id, doctor_name, appointment_date):
@@ -48,4 +48,4 @@ def send_appointment_email(to_email, patient_id, assignment_id, doctor_name, app
                .replace("{{assignment_id}}", str(assignment_id))
                .replace("{{doctor_name}}", str(doctor_name))
                .replace("{{appointment_date}}", str(appointment_date)))
-    return send_email(to_email, "Appointment Confirmation — AWS Hospital", html)
+    return send_email(to_email, "Appointment Confirmation — Health Care Hospital", html)
