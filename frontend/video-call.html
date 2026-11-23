@@ -50,6 +50,7 @@
     <span class="call-status" id="callStatus">Connecting…</span>
     <div class="call-timer" id="callTimer">00:00</div>
     <button class="btn btn-outline btn-sm" id="copyLinkBtn" onclick="copyCallLink()" title="Copy the Jitsi room link to share with the other side">Copy Call Link</button>
+    <a class="btn btn-outline btn-sm" id="directJoinBtn" href="#" target="_blank" rel="noopener" style="display:none;" title="Jitsi room ko seedha meet.ffmuc.net par kholo — embed kaam na kare to yahi use karo">Join directly</a>
   </header>
 
   <!-- Call stage: Jitsi + controls -->
@@ -89,7 +90,8 @@
       <h2>Video call start nahi hui</h2>
       <p id="errorText">Kuch galat hua — dobara try karo.</p>
       <div class="call-actions">
-        <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
+        <a class="btn btn-primary" id="errorDirectLink" href="#" target="_blank" rel="noopener" style="display:none;">Join directly on meet.ffmuc.net</a>
+        <button class="btn btn-outline" onclick="window.location.reload()">Try Again</button>
         <a class="btn btn-outline" id="errorBackLink" href="patient/my-appointments.html">My Appointments</a>
       </div>
     </div>
@@ -117,6 +119,7 @@
 
   var asg = null, doctorName = '', patientName = '', room = '';
   var callJoined = false;
+  var joinTimer = null;
 
   function show(el) { document.getElementById(el).style.display = 'flex'; }
   function hide(el) { document.getElementById(el).style.display = 'none'; }
@@ -157,10 +160,16 @@
   }
 
   function showError(msg) {
+    if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
     hide('callStage');
     hide('summaryWrap');
     document.getElementById('errorText').textContent = msg;
     document.getElementById('errorBackLink').href = role === 'doctor' ? 'doctors/appointments.html' : 'patient/my-appointments.html';
+    /* Direct-join fallback: show only when the room is known (never for
+       bad-link / not-your-booking errors, where room is still empty). */
+    var dl = document.getElementById('errorDirectLink');
+    if (room) { dl.href = 'https://meet.ffmuc.net/' + room; dl.style.display = ''; }
+    else { dl.style.display = 'none'; }
     show('errorWrap');
     setStatus('Failed', 'ended');
   }
@@ -202,6 +211,12 @@
     /* Same room for both sides — computed from the canonical API row. */
     room = roomName(asg.assignment_id, asg.appointment_date || qs.get('appointment_date') || '');
 
+    /* Direct-join fallback in the header: visible from now on, so the
+       patient can bypass the embed any time. */
+    var dj = document.getElementById('directJoinBtn');
+    dj.href = 'https://meet.ffmuc.net/' + room;
+    dj.style.display = '';
+
     try {
       await loadJitsi();
     } catch (e) {
@@ -216,6 +231,7 @@
       containerId: 'jitsiContainer',
       onStatus: function () {
         callJoined = true;
+        if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
         document.getElementById('micBtn').disabled = false;
         document.getElementById('camBtn').disabled = false;
         document.getElementById('endBtn').disabled = false;
@@ -247,7 +263,18 @@
       onEnded: function (result) { finishCall(result); },
       onError: function (msg) { showError(msg); }
     });
-    if (!joined) { showError('Video call start nahi hui — refresh karke dobara try karo.'); }
+    if (!joined) {
+      showError('Video call start nahi hui — refresh karke dobara try karo.');
+    } else {
+      /* Join timeout: if videoConferenceJoined never fires (embed blocked
+         or the conference never joins), don't sit on "Connecting..."
+         forever — show the error card with the direct-join fallback. */
+      joinTimer = setTimeout(function () {
+        if (!callJoined) {
+          showError('Video call connect nahi ho rahi — 25 second me room join nahi hua. Neeche diye gaye direct link se meet.ffmuc.net par seedha join karo, ya Try Again dabakar dobara try karo.');
+        }
+      }, 25000);
+    }
   }
 
   function onToggleAudio() { VideoCall.toggleAudio(); }
@@ -271,6 +298,7 @@
   }
 
   async function finishCall(result) {
+    if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
     hide('callStage');
     setStatus('Ended', 'ended');
     var durationText = formatCallDuration(result.durationSeconds);
