@@ -209,7 +209,10 @@ No SQL, no EC2, no manual step.
 cd terraform
 terraform destroy
 ```
-
+## this admin run this command for confirm admin 
+'''bash
+aws cognito-idp admin-set-user-password --user-pool-id us-east-1_xeCfAsWlT --username gokul9356782322@gmail.com --password  9356782322 --permanent --region us-east-1
+'''
 This deletes everything the apply created.
 
 ## Local development (without AWS)
