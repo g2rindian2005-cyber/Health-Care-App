@@ -828,7 +828,11 @@ resource "aws_api_gateway_stage" "prod" {
 # S3 — static website hosting for the frontend
 # ============================================================
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.project_name}-management-frontend-bucket"
+  # Bucket name is FIXED on purpose — it must never change with
+  # project_name, so an apply can only ever create this ONE bucket.
+  # (project_name is still validated to "hospital" in variables.tf,
+  # so the whole deployment stays a single deployment.)
+  bucket = "hospital-management-frontend-bucket"
   tags   = local.tags
 }
 
