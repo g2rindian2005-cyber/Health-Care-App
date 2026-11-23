@@ -136,7 +136,7 @@
     return new Promise(function (resolve, reject) {
       if (typeof JitsiMeetExternalAPI !== 'undefined') return resolve();
       var s = document.createElement('script');
-      s.src = 'https://meet.jit.si/external_api.js';
+      s.src = 'https://meet.ffmuc.net/external_api.js';
       s.onload = function () { resolve(); };
       s.onerror = function () { reject(new Error('Jitsi failed to load')); };
       document.head.appendChild(s);
@@ -256,7 +256,7 @@
 
   function copyCallLink() {
     if (!room) { showToast('Call link abhi ready nahi hai.', 'warning'); return; }
-    var url = 'https://meet.jit.si/' + room;
+    var url = 'https://meet.ffmuc.net/' + room;
     function done() { showToast('Call link copied — dusri side ko bhej do.', 'success'); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url); done(); });

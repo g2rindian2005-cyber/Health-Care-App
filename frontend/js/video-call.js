@@ -132,7 +132,7 @@ var VideoCall = (function () {
       return null;
     }
     try {
-      api = new JitsiMeetExternalAPI('meet.jit.si', {
+      api = new JitsiMeetExternalAPI('meet.ffmuc.net', {
         roomName: opts.room,
         width: '100%',
         height: '100%',
