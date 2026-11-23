@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Visit — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+    /* ── Camera preview ── */
+    .cam-preview-wrap { position:relative; width:100%; aspect-ratio:16/9; max-height:420px; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(147,197,253,.25); }
+    .cam-preview-wrap video { width:100%; height:100%; object-fit:cover; display:block; background:#000; }
+    .cam-preview-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; color:rgba(219,234,254,.75); font-size:13.5px; }
+    .cam-status-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
+    .cam-hint { margin-top:14px; padding:12px 14px; border-radius:10px; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fde68a; font-size:13.5px; line-height:1.5; }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Video Visit</h1>
+          <p>Test your camera and mic, then join your video consultation</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="my-appointments.html" class="btn btn-primary btn-sm">My Appointments</a>
+        </div>
+      </div>
+
+      <!-- No profile yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Complete your profile first</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then your video consultations will appear here.</p>
+          <a href="my-profile.html" class="btn btn-primary">Complete My Profile</a>
+        </div>
+      </div>
+
+      <div id="videoWrap" style="display:none;">
+        <!-- Camera & mic check -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Camera &amp; Mic Check</h3><p>Test before you join — your doctor will see and hear you</p></div>
+          </div>
+          <div class="card-body">
+            <div class="cam-preview-wrap">
+              <video id="camPreview" autoplay muted playsinline></video>
+              <div class="cam-preview-empty" id="camPreviewEmpty">Starting camera preview…</div>
+            </div>
+            <div class="cam-status-row">
+              <span class="badge badge-gray" id="camStatus">Camera: Checking…</span>
+              <span class="badge badge-gray" id="micStatus">Mic: Checking…</span>
+              <button class="btn btn-outline btn-sm" id="camToggleBtn" disabled>Camera Off</button>
+              <button class="btn btn-outline btn-sm" id="micToggleBtn" disabled>Mic Off</button>
+              <button class="btn btn-primary btn-sm" id="camRetryBtn" style="display:none;">Retry Camera</button>
+            </div>
+            <div class="cam-hint" id="camHint" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-green"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><div class="stat-info"><div class="stat-value" id="confirmedVideo">—</div><div class="stat-label">Ready to Join</div></div></div>
+          <div class="stat-card stat-amber"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-info"><div class="stat-value" id="scheduledVideo">—</div><div class="stat-label">Scheduled</div></div></div>
+        </div>
+
+        <!-- Video consultations list -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Video Consultations</h3><p>Confirmed appointments can join now</p></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Doctor</th><th>Appointment</th><th>Status</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="videoTable"><tr><td colspan="5"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'video-visit', title: 'Video Visit', subtitle: 'My Care' });
+
+  let myPid = null, myPatientName = '', allVideo = [];
+  let camStream = null, camTrack = null, micTrack = null, camOn = true, micOn = true;
+
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) return parseInt(cached, 10);
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  /* ── Camera & mic check ── */
+  function setPill(el, ok, label) {
+    el.textContent = label;
+    el.className = 'badge ' + (ok ? 'badge-success' : 'badge-gray');
+  }
+
+  function showCamHint(msg) {
+    const h = document.getElementById('camHint');
+    h.textContent = msg;
+    h.style.display = 'block';
+    document.getElementById('camRetryBtn').style.display = 'inline-flex';
+  }
+
+  function stopCameraTest() {
+    if (camStream) { camStream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} }); camStream = null; }
+    camTrack = null; micTrack = null;
+    const v = document.getElementById('camPreview');
+    if (v) v.srcObject = null;
+  }
+
+  async function startCameraTest() {
+    const empty = document.getElementById('camPreviewEmpty');
+    document.getElementById('camHint').style.display = 'none';
+    document.getElementById('camRetryBtn').style.display = 'none';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      empty.textContent = 'Camera preview is not available in this browser.';
+      setPill(document.getElementById('camStatus'), false, 'Camera: Not available');
+      setPill(document.getElementById('micStatus'), false, 'Mic: Not available');
+      showCamHint('Camera preview is browser me available nahi hai — please Chrome ya Edge use karo.');
+      return;
+    }
+    try {
+      stopCameraTest();
+      camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      camTrack = camStream.getVideoTracks()[0] || null;
+      micTrack = camStream.getAudioTracks()[0] || null;
+      camOn = true; micOn = true;
+      const v = document.getElementById('camPreview');
+      v.srcObject = camStream;
+      empty.style.display = 'none';
+      setPill(document.getElementById('camStatus'), !!camTrack, camTrack ? 'Camera: OK' : 'Camera: Not available');
+      setPill(document.getElementById('micStatus'), !!micTrack, micTrack ? 'Mic: OK' : 'Mic: Not available');
+      document.getElementById('camToggleBtn').disabled = !camTrack;
+      document.getElementById('micToggleBtn').disabled = !micTrack;
+      document.getElementById('camToggleBtn').textContent = 'Camera Off';
+      document.getElementById('micToggleBtn').textContent = 'Mic Off';
+    } catch (err) {
+      const name = (err && err.name) || '';
+      empty.textContent = 'Camera preview is not available right now.';
+      setPill(document.getElementById('camStatus'), false, 'Camera: Not available');
+      setPill(document.getElementById('micStatus'), false, 'Mic: Not available');
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        showCamHint('Camera ya mic ki permission allow karo — browser ke address bar me camera icon par click karke Allow karo, ya camera use karne wale dusre tabs/apps band karo, phir Retry dabao.');
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        showCamHint('Camera ya mic nahi mila — check karo ki camera connected hai, phir Retry dabao.');
+      } else {
+        showCamHint('Camera ya mic start nahi hua — permission check karo aur Retry dabao.');
+      }
+    }
+  }
+
+  document.getElementById('camToggleBtn').addEventListener('click', function () {
+    if (!camTrack) return;
+    camOn = !camOn;
+    camTrack.enabled = camOn;
+    document.getElementById('camToggleBtn').textContent = camOn ? 'Camera Off' : 'Camera On';
+  });
+
+  document.getElementById('micToggleBtn').addEventListener('click', function () {
+    if (!micTrack) return;
+    micOn = !micOn;
+    micTrack.enabled = micOn;
+    document.getElementById('micToggleBtn').textContent = micOn ? 'Mic Off' : 'Mic On';
+  });
+
+  document.getElementById('camRetryBtn').addEventListener('click', startCameraTest);
+  window.addEventListener('pagehide', stopCameraTest);
+
+  /* ── Video consultations list ── */
+  async function init() {
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('videoWrap').style.display = 'block';
+    startCameraTest();
+    const [data, pRes] = await Promise.all([DoctorsAPI.forPatient(myPid), PatientsAPI.get(myPid)]);
+    if (pRes && pRes.patient) myPatientName = (pRes.patient.first_name + ' ' + pRes.patient.last_name).trim();
+    const appts = (data && data.assignments) || [];
+    allVideo = appts.filter(function (a) { return a.status === 'Confirmed' || a.status === 'Scheduled'; });
+    allVideo.sort(function (a, b) { return new Date(a.appointment_date) - new Date(b.appointment_date); });
+
+    document.getElementById('confirmedVideo').textContent = allVideo.filter(function (a) { return a.status === 'Confirmed'; }).length;
+    document.getElementById('scheduledVideo').textContent = allVideo.filter(function (a) { return a.status === 'Scheduled'; }).length;
+
+    document.getElementById('videoTable').innerHTML = allVideo.length
+      ? allVideo.map(function (a) {
+          var joinLink = '../video-call.html?assignment_id=' + a.assignment_id +
+            '&role=patient&doctor_name=' + encodeURIComponent(a.doctor_name || '') +
+            '&appointment_date=' + encodeURIComponent(a.appointment_date || '') +
+            '&patient_name=' + encodeURIComponent(myPatientName);
+          if (a.status === 'Confirmed') {
+            return '<tr>' +
+              '<td class="fw-600">#' + a.assignment_id + '</td>' +
+              '<td class="fw-600">' + (a.doctor_name || '—') + '</td>' +
+              '<td class="text-muted">' + (a.appointment_date || '').toString().slice(0, 16) + '</td>' +
+              '<td>' + statusBadge(a.status) + '</td>' +
+              '<td><a class="btn btn-primary btn-sm" style="white-space:nowrap;" href="' + joinLink + '" onclick="stopCameraTest()" title="Join video consultation">Join Video Call</a></td>' +
+              '</tr>';
+          }
+          return '<tr style="opacity:.55;">' +
+            '<td class="fw-600">#' + a.assignment_id + '</td>' +
+            '<td class="fw-600">' + (a.doctor_name || '—') + '</td>' +
+            '<td class="text-muted">' + (a.appointment_date || '').toString().slice(0, 16) + '</td>' +
+            '<td>' + statusBadge(a.status) + '</td>' +
+            '<td class="text-muted" style="font-size:12.5px;">Opens after confirmation</td>' +
+            '</tr>';
+        }).join('')
+      : '<tr><td colspan="5"><div class="empty-state"><h4>No video consultations yet</h4><p>Book an appointment and confirm it to see your video visit here.</p></div></td></tr>';
+  }
+
+  init();
+</script>
+</body>
+</html>
