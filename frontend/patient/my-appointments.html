@@ -88,7 +88,7 @@
 <script>
   initApp({ page: 'my-appointments', title: 'My Appointments', subtitle: 'My Care' });
 
-  let myPid = null, allAppts = [], apptPage = 1;
+  let myPid = null, allAppts = [], apptPage = 1, myPatientName = '';
   const perPage = 8;
 
   async function resolveMyPatient() {
@@ -111,7 +111,8 @@
       return;
     }
     document.getElementById('appointmentsWrap').style.display = 'block';
-    const data = await DoctorsAPI.forPatient(myPid);
+    const [data, pRes] = await Promise.all([DoctorsAPI.forPatient(myPid), PatientsAPI.get(myPid)]);
+    if (pRes && pRes.patient) myPatientName = (pRes.patient.first_name + ' ' + pRes.patient.last_name).trim();
     allAppts = (data && data.assignments) || [];
     allAppts.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
@@ -144,6 +145,8 @@
             <a class="btn-icon" href="appointment-confirm.html?assignment_id=${a.assignment_id}" title="View confirmation & QR code">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
             </a>
+            ${a.status === 'Confirmed' ? `
+            <a class="btn btn-primary btn-sm" style="margin-left:6px; white-space:nowrap;" href="../video-call.html?assignment_id=${a.assignment_id}&role=patient&doctor_name=${encodeURIComponent(a.doctor_name || '')}&appointment_date=${encodeURIComponent(a.appointment_date || '')}&patient_name=${encodeURIComponent(myPatientName)}" title="Join video consultation">Video Call</a>` : ''}
             ${(a.status === 'Scheduled' || a.status === 'Confirmed' || a.status === 'Active') ? `
             <button class="btn-icon btn-icon-danger" onclick="cancelAppt(${a.assignment_id})" title="Cancel appointment">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>

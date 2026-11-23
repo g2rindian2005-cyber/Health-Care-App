@@ -347,6 +347,15 @@ function buildPatientSidebarHTML() {
       </span>
       My Profile
     </a>
+    <a href="${p}patient/consultation-history.html" class="nav-item" data-page="consultation-history">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+        </svg>
+      </span>
+      Consultation History
+    </a>
   </div>
 </nav>
 

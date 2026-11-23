@@ -125,9 +125,11 @@
                 <p class="qr-note">Hospital reception pe ye QR dikhao — check-in ke liye.<br>Booking ID aur Token Number bhi saath me dikha dena.</p>
               </div>
               <div class="qr-actions">
+                <a class="btn btn-primary btn-sm" id="joinCallBtn" href="#" title="Join the video consultation with your doctor">Join Video Call</a>
                 <button type="button" class="btn btn-outline btn-sm" id="downloadQrBtn" onclick="downloadQR()" style="display:none;">Download QR</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print</button>
               </div>
+              <p class="qr-note">Video consultation: doctor bhi isi appointment ke video room me join karenge — Join Video Call dabate hi call shuru hogi.</p>
             </div>
 
             <!-- Locked placeholder (while not yet Confirmed) -->
@@ -265,6 +267,11 @@
       hide('confirmStep');
       show('qrStep');
       hide('qrLocked');
+      document.getElementById('joinCallBtn').href =
+        '../video-call.html?assignment_id=' + asg.assignment_id +
+        '&role=patient&doctor_name=' + encodeURIComponent(docName) +
+        '&appointment_date=' + encodeURIComponent(asg.appointment_date || '') +
+        '&patient_name=' + encodeURIComponent(patName);
       makeQR();
     } else {
       hide('confirmStep');

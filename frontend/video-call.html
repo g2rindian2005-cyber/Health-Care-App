@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Consultation — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=8">
+  <style>
+    /* ── Full-screen video call page (Midnight Navy) ── */
+    html, body { height: 100%; }
+    body { background: #0a1128; color: #e6eef7; margin: 0; }
+    .call-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+    .call-header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 18px; background: #0f1e45; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .call-brand { font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap; }
+    .call-brand span { color: #60a5fa; }
+    .call-info { font-size: 13px; color: #cbd5e1; flex: 1; min-width: 180px; }
+    .call-status { font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: rgba(251,191,36,.15); color: #fbbf24; border: 1px solid rgba(251,191,36,.35); white-space: nowrap; }
+    .call-status.live { background: rgba(45,212,191,.15); color: #2dd4bf; border-color: rgba(45,212,191,.35); }
+    .call-status.ended { background: rgba(148,163,184,.15); color: #94a3b8; border-color: rgba(148,163,184,.35); }
+    .call-timer { font-size: 16px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; min-width: 64px; text-align: center; }
+    .call-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #000; }
+    #jitsiContainer { flex: 1; min-height: 0; }
+    .call-hint { padding: 10px 18px; font-size: 12.5px; line-height: 1.6; color: rgba(219,234,254,.78); background: #0d1b3e; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .call-controls { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 14px 16px; background: #0f1e45; border-top: 1px solid rgba(255,255,255,.08); }
+    .call-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); color: #f1f5f9; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .call-btn:hover { background: rgba(255,255,255,.13); }
+    .call-btn.off { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.5); color: #fca5a5; }
+    .call-btn-end { background: #dc2626; border-color: #dc2626; color: #fff; }
+    .call-btn-end:hover { background: #b91c1c; }
+    .call-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .call-center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .call-card { width: 100%; max-width: 560px; background: linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border: 1px solid rgba(147,197,253,.22); border-radius: 20px; padding: 28px 26px; text-align: center; box-shadow: 0 18px 38px -14px rgba(11,47,107,.55); }
+    .call-card h2 { font-size: 21px; font-weight: 800; color: #fff; margin: 0 0 6px; }
+    .call-card p { font-size: 13.5px; color: rgba(219,234,254,.78); line-height: 1.8; margin: 0 0 14px; }
+    .call-card .sum-rows { text-align: left; margin: 18px 0; }
+    .call-card .sum-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,.15); font-size: 13.5px; }
+    .call-card .sum-row:last-child { border-bottom: none; }
+    .call-card .sum-row .k { color: rgba(219,234,254,.70); }
+    .call-card .sum-row .v { font-weight: 600; color: #fff; text-align: right; }
+    .call-card .call-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  </style>
+</head>
+<body>
+<div class="call-page">
+
+  <header class="call-header">
+    <div class="call-brand">Healthe<span>Care</span> · Video Consultation</div>
+    <div class="call-info" id="callInfo">Loading appointment…</div>
+    <span class="call-status" id="callStatus">Connecting…</span>
+    <div class="call-timer" id="callTimer">00:00</div>
+    <button class="btn btn-outline btn-sm" id="copyLinkBtn" onclick="copyCallLink()" title="Copy the Jitsi room link to share with the other side">Copy Call Link</button>
+  </header>
+
+  <!-- Call stage: Jitsi + controls -->
+  <div class="call-stage" id="callStage">
+    <div class="call-hint" id="callHint">Camera aur mic ke liye browser me <b>Allow</b> dabayein — bina camera ke bhi audio se baat ho sakti hai.</div>
+    <div id="jitsiContainer"></div>
+    <div class="call-controls">
+      <button class="call-btn" id="micBtn" onclick="onToggleAudio()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        <span id="micLabel">Audio On</span>
+      </button>
+      <button class="call-btn" id="camBtn" onclick="onToggleVideo()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span id="camLabel">Video On</span>
+      </button>
+      <button class="call-btn call-btn-end" id="endBtn" onclick="onEndCall()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.71A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .71 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="23" x2="17" y1="1" y2="7"/><line x1="17" x2="23" y1="1" y2="7"/></svg>
+        End Call
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary after the call ends -->
+  <div class="call-center" id="summaryWrap" style="display:none;">
+    <div class="call-card">
+      <h2 id="summaryTitle">Consultation Ended</h2>
+      <p id="summarySub"></p>
+      <div class="sum-rows" id="summaryRows"></div>
+      <p id="historyNote" style="font-size:12.5px;"></p>
+      <div class="call-actions" id="summaryLinks"></div>
+    </div>
+  </div>
+
+  <!-- Error (bad link / not your booking / Jitsi down) -->
+  <div class="call-center" id="errorWrap" style="display:none;">
+    <div class="call-card">
+      <h2>Video call start nahi hui</h2>
+      <p id="errorText">Kuch galat hua — dobara try karo.</p>
+      <div class="call-actions">
+        <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
+        <a class="btn btn-outline" id="errorBackLink" href="patient/my-appointments.html">My Appointments</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/ui.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/video-call.js"></script>
+<script>
+  /* NOTE: this page does NOT call initApp() — initApp's role guard
+     would bounce one of the two sides away (patients are forced
+     into /patient/, admins out of it), but the same call page
+     serves BOTH. Auth is the same token check initApp uses. */
+  if (!localStorage.getItem('hms_token') && !sessionStorage.getItem('hms_token')) {
+    window.location.href = 'login.html';
+  }
+
+  var qs = new URLSearchParams(window.location.search);
+  var assignmentId = qs.get('assignment_id');
+  var role = qs.get('role') === 'doctor' ? 'doctor' : 'patient';
+  var otherLabel = role === 'patient' ? 'doctor' : 'patient';
+
+  var asg = null, doctorName = '', patientName = '', room = '';
+  var callJoined = false;
+
+  function show(el) { document.getElementById(el).style.display = 'flex'; }
+  function hide(el) { document.getElementById(el).style.display = 'none'; }
+  function setStatus(text, cls) {
+    var s = document.getElementById('callStatus');
+    s.textContent = text;
+    s.className = 'call-status' + (cls ? ' ' + cls : '');
+  }
+
+  /* "Dr. Anjali Sharma" / "Anjali Sharma" -> "Dr. Anjali Sharma" (never "Dr. Dr. …") */
+  function displayDoctorName(n) {
+    var s = String(n || '').replace(/^\s*dr\.?\s+/i, '').trim();
+    return s ? 'Dr. ' + s : 'Doctor';
+  }
+
+  function loadJitsi() {
+    return new Promise(function (resolve, reject) {
+      if (typeof JitsiMeetExternalAPI !== 'undefined') return resolve();
+      var s = document.createElement('script');
+      s.src = 'https://meet.jit.si/external_api.js';
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('Jitsi failed to load')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function resolveMyPid() {
+    var cached = sessionStorage.getItem('hms_pid');
+    if (cached) return parseInt(cached, 10);
+    var email = (typeof getMyEmail === 'function') ? getMyEmail() : '';
+    if (!email) return null;
+    var res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  function showError(msg) {
+    hide('callStage');
+    hide('summaryWrap');
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('errorBackLink').href = role === 'doctor' ? 'doctors/appointments.html' : 'patient/my-appointments.html';
+    show('errorWrap');
+    setStatus('Failed', 'ended');
+  }
+
+  async function init() {
+    if (!assignmentId) { showError('Link me appointment id nahi hai — My Appointments se dobara join karo.'); return; }
+
+    var res = await DoctorsAPI.assignment(assignmentId);
+    asg = res && res.assignment;
+    if (!asg) { showError('Appointment load nahi hui — connection check karo aur refresh karo.'); return; }
+
+    /* Patient side: only the assignment's own patient may join. */
+    if (role === 'patient') {
+      var myPid = await resolveMyPid();
+      if (!myPid || myPid !== asg.patient_id) {
+        showError('Ye tumhari booking nahi hai — tum sirf apni appointment ki video call join kar sakte ho.');
+        return;
+      }
+    }
+
+    /* Names: canonical from the API, URL params as fallback. */
+    var docName = (qs.get('doctor_name') || '');
+    var patName = (qs.get('patient_name') || '');
+    try {
+      var dRes = await DoctorsAPI.get(asg.doctor_id);
+      if (dRes && dRes.doctor) docName = (dRes.doctor.first_name + ' ' + dRes.doctor.last_name).trim();
+    } catch (e) { /* keep the URL param */ }
+    try {
+      var pRes = await PatientsAPI.get(asg.patient_id);
+      if (pRes && pRes.patient) patName = (pRes.patient.first_name + ' ' + pRes.patient.last_name).trim();
+    } catch (e) { /* keep the URL param */ }
+    doctorName = displayDoctorName(docName);
+    patientName = patName || ('Patient ' + asg.patient_id);
+
+    var dateStr = (asg.appointment_date || qs.get('appointment_date') || '').toString().slice(0, 16);
+    document.getElementById('callInfo').textContent =
+      'Appointment #' + asg.assignment_id + ' · ' + doctorName + ' · ' + (dateStr || '—');
+
+    /* Same room for both sides — computed from the canonical API row. */
+    room = roomName(asg.assignment_id, asg.appointment_date || qs.get('appointment_date') || '');
+
+    try {
+      await loadJitsi();
+    } catch (e) {
+      showError('Jitsi load nahi hua — internet connection check karo aur refresh karo.');
+      return;
+    }
+
+    var displayName = role === 'doctor' ? doctorName + ' (Doctor)' : patientName + ' (Patient)';
+    var joined = VideoCall.join({
+      room: room,
+      displayName: displayName,
+      containerId: 'jitsiContainer',
+      onStatus: function () {
+        callJoined = true;
+        document.getElementById('micBtn').disabled = false;
+        document.getElementById('camBtn').disabled = false;
+        document.getElementById('endBtn').disabled = false;
+        setStatus('Waiting for ' + otherLabel + ' to join…');
+        document.getElementById('callHint').textContent =
+          role === 'patient'
+            ? 'Tum video room me ho — doctor ke join karte hi consultation shuru hogi. Doctor apne appointments page se isi room me join karenge.'
+            : 'Tum video room me ho — patient ke join karte hi consultation shuru hogi. Patient apni appointment se isi room me join karega.';
+      },
+      onPeerJoined: function () {
+        setStatus('Consultation in progress', 'live');
+        document.getElementById('callHint').textContent = 'Consultation chal rahi hai — neeche Audio/Video band kar sakte ho, End Call se khatam karo.';
+      },
+      onPeerLeft: function () {
+        if (VideoCall.getDurationSeconds() > 0) {
+          setStatus('The other side left the call');
+          document.getElementById('callHint').textContent = 'Dusri side ne call chhod di — tum End Call dabakar khatam kar sakte ho, ya wait kar sakte ho.';
+        }
+      },
+      onTick: function (seconds) {
+        document.getElementById('callTimer').textContent = formatCallDuration(seconds);
+      },
+      onMuteChange: function (st) {
+        document.getElementById('micBtn').classList.toggle('off', !!st.audio);
+        document.getElementById('micLabel').textContent = st.audio ? 'Audio Off' : 'Audio On';
+        document.getElementById('camBtn').classList.toggle('off', !!st.video);
+        document.getElementById('camLabel').textContent = st.video ? 'Video Off' : 'Video On';
+      },
+      onEnded: function (result) { finishCall(result); },
+      onError: function (msg) { showError(msg); }
+    });
+    if (!joined) { showError('Video call start nahi hui — refresh karke dobara try karo.'); }
+  }
+
+  function onToggleAudio() { VideoCall.toggleAudio(); }
+  function onToggleVideo() { VideoCall.toggleVideo(); }
+  function onEndCall() { VideoCall.endCall(); }
+
+  function copyCallLink() {
+    if (!room) { showToast('Call link abhi ready nahi hai.', 'warning'); return; }
+    var url = 'https://meet.jit.si/' + room;
+    function done() { showToast('Call link copied — dusri side ko bhej do.', 'success'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url); done(); });
+    } else { fallbackCopy(url); done(); }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  async function finishCall(result) {
+    hide('callStage');
+    setStatus('Ended', 'ended');
+    var durationText = formatCallDuration(result.durationSeconds);
+    var dateStr = (asg && asg.appointment_date ? String(asg.appointment_date).slice(0, 16) : '');
+    var historySaved = false;
+
+    if (result.peerJoined) {
+      /* A real consultation happened — record it (best-effort). */
+      historySaved = await recordConsultation(asg.assignment_id, doctorName, result.durationMinutes);
+      document.getElementById('summaryTitle').textContent = 'Consultation Ended';
+      document.getElementById('summarySub').textContent = 'Thanks — tumhari video consultation khatam hui.';
+    } else {
+      document.getElementById('summaryTitle').textContent = 'Call Ended — No Consultation';
+      document.getElementById('summarySub').textContent = 'Dusri side join nahi hui, isliye consultation record nahi bani. Appointment time par dobara try karo.';
+    }
+
+    document.getElementById('summaryRows').innerHTML = [
+      ['Doctor', doctorName],
+      ['Patient', patientName],
+      ['Appointment', 'Appointment #' + asg.assignment_id + (dateStr ? ' · ' + dateStr : '')],
+      ['Call Duration', durationText],
+      ['Status', result.peerJoined ? 'Completed' : 'Not joined']
+    ].map(function (r) {
+      return '<div class="sum-row"><span class="k">' + r[0] + '</span><span class="v">' + r[1] + '</span></div>';
+    }).join('');
+
+    document.getElementById('historyNote').textContent =
+      result.peerJoined
+        ? (historySaved ? 'Consultation History me save ho gaya.' : 'History save nahi ho payi — connection check karo; call ka record dobara save karne ke liye support se bolo.')
+        : '';
+
+    document.getElementById('summaryLinks').innerHTML = role === 'patient'
+      ? '<a href="patient/consultation-history.html" class="btn btn-primary">Consultation History</a><a href="patient/my-appointments.html" class="btn btn-outline">My Appointments</a>'
+      : '<a href="doctors/appointments.html" class="btn btn-primary">Back to Appointments</a><a href="dashboard.html" class="btn btn-outline">Dashboard</a>';
+    show('summaryWrap');
+  }
+
+  init();
+</script>
+</body>
+</html>
