@@ -3,7 +3,8 @@
 Deploy the whole HealtheCare project with Terraform. Current stack:
 **12 DynamoDB tables, 7 Lambda services + db-init + Cognito migration
 Lambda, API Gateway, S3 + CloudFront, AWS Cognito sign-in (password
-only — no OTP at sign-in), patient panel.** No RDS, no EC2, no MySQL,
+only — no OTP at sign-in), patient panel with real video consultation
+(Jitsi on meet.ffmuc.net) and a Video Visit page.** No RDS, no EC2, no MySQL,
 no manual SQL — the db-init Lambda seeds the sample data
 automatically. The API URL and the Cognito pool/client IDs are written
 into `js/config.js` by Terraform on every apply.
@@ -60,11 +61,12 @@ ses_from_email      = "gokul9356782322@gmail.com"
 auth_admin_password = "your-password"
 ```
 
-The other values (`project_name = "hospital2"`, `aws_region`,
-`environment`) already have working defaults. The S3 bucket name is
-`<project>-management-frontend-bucket` and must be globally unique —
-if `hospital2-management-frontend-bucket` already exists in another
-account, change `project_name`.
+`project_name` must be `"hospital"` — the repo validates it and
+`terraform plan` fails otherwise. The S3 bucket name is hardcoded to
+`hospital-management-frontend-bucket` in `main.tf` and never changes
+with `project_name`, so a second apply can never create a second
+bucket. The other values (`aws_region`, `environment`) already have
+working defaults.
 
 You do **not** need any SMTP / Gmail App Password for sign-in any
 more. Cognito sends its own verification and password-reset emails.
@@ -85,7 +87,7 @@ terraform plan
 terraform apply
 ```
 
-`plan` should show ~189 to add and 0 to destroy. Type `yes` at the
+`plan` should show ~190 to add and 0 to destroy. Type `yes` at the
 `apply` prompt. It takes ~10 minutes (CloudFront is the slow part).
 
 What gets created: 12 DynamoDB tables, 7 Lambda services + db-init +
@@ -125,7 +127,7 @@ and `cognito_user_pool_id` / `cognito_client_id`.
 
 ```bash
 cd ..
-aws s3 sync frontend/ s3://hospital2-management-frontend-bucket/
+aws s3 sync frontend/ s3://hospital-management-frontend-bucket/
 ```
 
 The bucket name is `<project>-management-frontend-bucket` from your
@@ -133,6 +135,19 @@ The bucket name is `<project>-management-frontend-bucket` from your
 wrote `js/config.js` into the bucket, and `--delete` would remove it,
 leaving the site unable to reach the API. Do NOT edit `js/api.js`
 to paste the API URL either — `config.js` is how the site finds it.
+
+Then invalidate CloudFront so the new files show immediately
+(otherwise the old cached pages keep serving for a long time):
+
+```bash
+aws cloudfront list-distributions --query "DistributionList.Items[].{Id:Id,Origin:Origins.Items[0].DomainName}" --output table
+aws cloudfront create-invalidation --distribution-id <the-id-from-above> --paths "/*"
+```
+
+Wait for the invalidation to finish before testing
+(`aws cloudfront get-invalidation --distribution-id <id> --id
+<invalidation-id> --query "Invalidation.Status"` should print
+`Completed`).
 
 Data is seeded automatically: the `db-init` Lambda runs once after
 `terraform apply` and loads the sample data (5 patients, 5 doctors,
@@ -146,19 +161,44 @@ No SQL, no EC2, no manual step.
    a verification code **once, at sign-up**; enter it and the patient
    panel opens (My Appointments / Book Appointment / My Profile).
    Sign-in after that is password-only — there is no OTP step.
-3. Sign in as admin with your **`ses_from_email` address** (not the
-   username `admin`) and your `auth_admin_password` — the dashboard
-   opens. The login page has a Patient / Admin choice, but the
-   **account** decides where you land: admin accounts always open
-   the dashboard, patient accounts always open the patient panel.
-4. If you forget the admin password, use **"Forgot password?"** on
+3. **Admin first sign-in — do this once from the CLI.** The admin
+   account does not exist in the User Pool until the first sign-in,
+   and the browser's sign-in does **not** create it (it only works
+   for accounts that already exist). Run this once with your
+   `cognito_client_id` from step 4:
+
+   ```bash
+   aws cognito-idp initiate-auth --client-id <cognito_client_id> --auth-flow USER_PASSWORD_AUTH --auth-parameters USERNAME=<ses_from_email>,PASSWORD=<auth_admin_password> --region us-east-1
+   ```
+
+   It returns tokens and creates the admin account (CONFIRMED, in
+   the Admins group). After this one CLI sign-in, the browser sign-in
+   works.
+4. Sign in as admin in the browser with your **`ses_from_email`
+   address** (not the username `admin`) and your
+   `auth_admin_password` — the dashboard opens. The login page has a
+   Patient / Admin choice, but the **account** decides where you
+   land: admin accounts always open the dashboard, patient accounts
+   always open the patient panel.
+5. If you forget the admin password, use **"Forgot password?"** on
    the login page — Cognito emails a reset code and you set a new
-   password there. (Note: the migration Lambda still holds the old
+   password there. Two things to know: the reset code only arrives
+   if the account already exists **and** its email is verified, and
+   the email must be typed with **no spaces** (a leading or trailing
+   space fails with a "username failed to satisfy constraint" error).
+   (Note: the migration Lambda still holds the old
    `auth_admin_password` for first-time sign-ins of old users, so
    after a reset, update `auth_admin_password` in your tfvars to the
    new password and run `terraform apply` once to keep them in sync.)
-5. Book an appointment from the patient panel and check it appears
-   in My Appointments.
+6. Book an appointment from the patient panel and check it appears
+   in My Appointments. Confirm it (appointment-confirm page), then
+   test the **video consultation**: the patient opens the Video
+   Visit page (or the Join Video Call button) and the doctor joins
+   the same appointment from doctors/appointments — both land in the
+   same room. If the video area stays blank or stuck on
+   "Connecting..." for 25 seconds, the page shows a "Join directly"
+   link — open it in a new tab (or use Copy Call Link) to bypass the
+   embed; also try a hard refresh (Ctrl+Shift+R) or Incognito.
 
 ## 7. How to know Lambda is working
 
@@ -172,8 +212,8 @@ No SQL, no EC2, no manual step.
   the browser console) means the email/password did not match — the
   admin must use the `ses_from_email` address, not `admin`. The
   migration Lambda's log group is
-  `/aws/lambda/hospital2-cognito-migration-service` in CloudWatch.
-- **AWS Console:** Lambda → a function (e.g. `hospital2-patient-service`)
+  `/aws/lambda/hospital-cognito-migration-service` in CloudWatch.
+- **AWS Console:** Lambda → a function (e.g. `hospital-patient-service`)
   → Monitor tab: Invocations going up and Errors at 0 means it runs.
   CloudWatch logs show the reason when something fails.
 
@@ -197,4 +237,9 @@ cd terraform
 terraform destroy
 ```
 
-This deletes everything the apply created.
+This deletes everything the apply created. If destroy fails with
+`BucketNotEmpty`, the S3 bucket still holds old object versions
+(versioning is on) — delete **all** versions and delete markers
+first (the AWS Console S3 bucket → Empty, or a script that deletes
+every version), then run `terraform destroy` again. A plain
+`aws s3 rm --recursive` is not enough — it only adds delete markers.
