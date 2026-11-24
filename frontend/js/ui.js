@@ -704,6 +704,35 @@ function _notifMarkAssignmentsSeen(ids) {
   } catch (e) {}
 }
 
+/* Doctor "confirmed" tracking: the last status the doctor saw for
+   each assignment (localStorage 'hms_notif_seen_status', an object
+   {id: status}). The id-only list above cannot tell a confirm apart
+   from an already-seen appointment — so when an assignment the
+   doctor already saw changes TO "Confirmed" (the patient confirmed
+   it), the bell shows a "Confirmed" badge + red dot. On the very
+   first run the map is seeded with the current statuses, so
+   already-confirmed appointments don't all flood in as new. */
+const NOTIF_SEEN_STATUS_KEY = 'hms_notif_seen_status';
+
+function _notifSeenStatus() {
+  try {
+    const v = JSON.parse(localStorage.getItem(NOTIF_SEEN_STATUS_KEY) || '{}');
+    return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  } catch (e) { return {}; }
+}
+function _notifHasSeenStatus() {
+  try { return localStorage.getItem(NOTIF_SEEN_STATUS_KEY) !== null; } catch (e) { return false; }
+}
+function _notifMarkStatusSeen(rows) {
+  try {
+    const map = _notifSeenStatus();
+    (rows || []).forEach(a => { map[String(a.assignment_id)] = a.status || ''; });
+    const pruned = {};
+    Object.keys(map).slice(-200).forEach(k => { pruned[k] = map[k]; });
+    localStorage.setItem(NOTIF_SEEN_STATUS_KEY, JSON.stringify(pruned));
+  } catch (e) {}
+}
+
 function _notifReadAt() {
   try {
     const v = parseInt(localStorage.getItem(NOTIF_READ_KEY) || '0', 10);
@@ -787,11 +816,18 @@ async function _notifPatientItems() {
   return { items, failed: false };
 }
 
-/* Doctor items — TWO live notification types:
+/* Doctor items — THREE live notification types:
    (1) NEW APPOINTMENT ASSIGNED: an assignment whose id is not in
    the seen list shows with a "New" badge (the first run seeds the
    list, so old appointments don't flood in as new).
-   (2) PATIENT WAITING FOR VIDEO CALL: a Confirmed appointment
+   (2) APPOINTMENT CONFIRMED: an assignment the doctor already saw
+   whose status changed TO "Confirmed" (the patient confirmed it)
+   shows with a green "Confirmed" badge. The id-only seen list
+   cannot tell this apart from an already-seen appointment, so the
+   last-seen status per assignment is tracked separately
+   (localStorage 'hms_notif_seen_status'); the first run seeds it
+   with the current statuses.
+   (3) PATIENT WAITING FOR VIDEO CALL: a Confirmed appointment
    whose patient_waiting_at is set and less than 60 minutes old
    shows first, in red, with a "Waiting" badge and a one-click
    link straight into the video call. The flag is set by the
@@ -799,9 +835,10 @@ async function _notifPatientItems() {
    joins or the call ends (see video-call.js).
    DID + doctor name are resolved exactly like the doctor panel:
    cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()).
-   Returns { items, failed, unread, assignmentIds } — unread drives
-   the red dot (any New or Waiting item); assignmentIds lets the
-   bell mark everything seen when the doctor opens it. */
+   Returns { items, failed, unread, assignmentIds, assignmentRows } —
+   unread drives the red dot (any New, Confirmed or Waiting item);
+   assignmentIds/assignmentRows let the bell mark everything seen
+   (ids + statuses) when the doctor opens it. */
 async function _notifDoctorItems() {
   if (typeof DoctorsAPI === 'undefined')
     return { items: [], failed: true };
@@ -830,7 +867,9 @@ async function _notifDoctorItems() {
      must happen BEFORE the set is built, or the first run floods
      every existing appointment in as "New". */
   if (!_notifHasSeenList()) _notifMarkAssignmentsSeen(assignmentIds);
+  if (!_notifHasSeenStatus()) _notifMarkStatusSeen(rows);
   const seen = new Set(_notifSeenAssignments());
+  const seenStatus = _notifSeenStatus();
   const items = [];
   rows
     .filter(a => a.status === 'Confirmed' || a.status === 'Scheduled')
@@ -857,18 +896,25 @@ async function _notifDoctorItems() {
         return;
       }
       const isNew = !seen.has(Number(a.assignment_id));
+      /* The patient confirmed it after the doctor last looked:
+         the doctor saw this assignment before, its last-seen status
+         was not Confirmed, and now it is. */
+      const prevStatus = seenStatus[String(a.assignment_id)];
+      const justConfirmed = !isNew && prevStatus && prevStatus !== 'Confirmed' && a.status === 'Confirmed';
       items.push({
         color: a.status === 'Confirmed' ? 'var(--green-500)' : 'var(--blue-500)',
-        badge: isNew ? 'New' : '',
-        badgeKind: isNew ? 'new' : '',
-        isNew: isNew,
-        text: `Appointment #${a.assignment_id} with ${a.patient_name || 'Patient'}${when ? ' — ' + when : ''}`,
+        badge: justConfirmed ? 'Confirmed' : (isNew ? 'New' : ''),
+        badgeKind: justConfirmed ? 'confirmed' : (isNew ? 'new' : ''),
+        isNew: justConfirmed || isNew,
+        text: justConfirmed
+          ? `Patient ${a.patient_name || 'Patient'} confirmed Appointment #${a.assignment_id}${when ? ' — ' + when : ''}`
+          : `Appointment #${a.assignment_id} with ${a.patient_name || 'Patient'}${when ? ' — ' + when : ''}`,
         time: a.status || '',
         ts: _notifTs(a.appointment_date),
         href: resolveRoot('doctor/my-appointments.html'),
       });
     });
-  return { items, failed: false, unread: items.some(it => it.isNew), assignmentIds };
+  return { items, failed: false, unread: items.some(it => it.isNew), assignmentIds, assignmentRows: rows };
 }
 
 /* Admin items: pending dues + pending lab orders + low-stock medicines.
@@ -975,8 +1021,10 @@ async function _notifToggle() {
   if (!result.failed) {
     _notifMarkRead(); _notifSetDot(false);
     /* Doctor: opening the bell marks every current appointment
-       seen, so "New" badges clear until the next new one arrives. */
+       seen (ids + statuses), so "New" and "Confirmed" badges clear
+       until the next new one arrives or another confirm happens. */
     if (result.assignmentIds) _notifMarkAssignmentsSeen(result.assignmentIds);
+    if (result.assignmentRows) _notifMarkStatusSeen(result.assignmentRows);
   }
 }
 
