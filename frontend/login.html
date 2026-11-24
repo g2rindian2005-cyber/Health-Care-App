@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=10">
   <style>
-    /* Sign in as Patient or Admin — segmented choice above the form */
+    /* Sign in as Patient, Doctor or Admin — segmented choice above the form */
     .role-toggle { display:flex; gap:6px; background:rgba(255,255,255,0.06);
       border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:4px; margin-bottom:20px; }
     .role-toggle button { flex:1; padding:10px 8px; border:0; border-radius:9px;
@@ -83,6 +83,7 @@
        <div id="step1">
         <div class="role-toggle" id="roleToggle" role="tablist" aria-label="Sign in as">
           <button type="button" id="rolePatientBtn" class="active" data-role="patient">👤 Patient</button>
+          <button type="button" id="roleDoctorBtn" data-role="doctor">🩺 Doctor</button>
           <button type="button" id="roleAdminBtn" data-role="admin">🛡 Admin</button>
         </div>
         <div class="form-group">
@@ -243,29 +244,34 @@
     document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : step === 2 ? 'Verify & Sign In' : (resetPhase === 1 ? 'Send Code' : 'Reset Password');
   }
 
-  /* ── Sign in as Patient or Admin ──────────────────────────────────
+  /* ── Sign in as Patient, Doctor or Admin ──────────────────────────
      The buttons choose which side you want to open. The account itself
      still decides: an admin account always opens the dashboard, a patient
-     account always opens the patient panel. If the choice and the account
-     disagree, finishLogin says so and opens the right side anyway. */
+     account always opens the patient panel, a doctor account always opens
+     the doctor panel. If the choice and the account disagree, finishLogin
+     says so and opens the right side anyway. */
   let selectedRole = 'patient';
   try { selectedRole = localStorage.getItem('hms_login_role') || 'patient'; } catch (e) {}
-  if (selectedRole !== 'admin') selectedRole = 'patient';
+  if (selectedRole !== 'admin' && selectedRole !== 'doctor') selectedRole = 'patient';
 
   function applyRoleUI() {
     document.getElementById('rolePatientBtn').classList.toggle('active', selectedRole === 'patient');
+    document.getElementById('roleDoctorBtn').classList.toggle('active', selectedRole === 'doctor');
     document.getElementById('roleAdminBtn').classList.toggle('active', selectedRole === 'admin');
-    document.getElementById('username').placeholder = selectedRole === 'admin' ? 'your admin email' : 'you@example.com';
+    document.getElementById('username').placeholder = selectedRole === 'admin' ? 'your admin email'
+      : selectedRole === 'doctor' ? 'your doctor email' : 'you@example.com';
     document.getElementById('registerRow').style.display = selectedRole === 'admin' ? 'none' : 'block';
     document.getElementById('adminNote').style.display = selectedRole === 'admin' ? 'block' : 'none';
     if (step === 1) {
       document.getElementById('loginSubtitle').textContent = selectedRole === 'admin'
         ? 'Sign in to manage the hospital'
+        : selectedRole === 'doctor' ? 'Sign in to your doctor panel'
         : 'Sign in to your HealtheCare account';
     }
     try { localStorage.setItem('hms_login_role', selectedRole); } catch (e) {}
   }
   document.getElementById('rolePatientBtn').addEventListener('click', () => { selectedRole = 'patient'; applyRoleUI(); });
+  document.getElementById('roleDoctorBtn').addEventListener('click', () => { selectedRole = 'doctor'; applyRoleUI(); });
   document.getElementById('roleAdminBtn').addEventListener('click', () => { selectedRole = 'admin'; applyRoleUI(); });
   applyRoleUI();
 
