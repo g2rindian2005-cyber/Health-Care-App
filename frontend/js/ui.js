@@ -658,8 +658,12 @@ function initApp(opts = {}) {
    The bell opens a dropdown fed by LIVE API data only — no mock or
    hardcoded items. Patient: upcoming Confirmed/Scheduled appointments
    + Pending bills. Doctor: upcoming Confirmed/Scheduled appointments
-   with the patient name. Admin: pending dues + pending lab orders +
-   low-stock medicines. Opening the dropdown marks everything read
+   with the patient name — a "New" badge for appointments assigned
+   since the doctor last opened the bell, and a red "Waiting" item
+   (linking straight into the video call) when the patient has
+   joined the room; the doctor panel polls every 30 seconds so
+   both appear without a page refresh. Admin: pending dues + pending
+   lab orders + low-stock medicines. Opening the dropdown marks everything read
    (localStorage 'hms_notif_read_at'); the red dot only shows while
    unread items exist. Every fetch is best-effort: a failed fetch shows
    a short line in the dropdown and never breaks the page.
@@ -673,6 +677,32 @@ function initApp(opts = {}) {
    count as new while the stock is low. */
 const NOTIF_READ_KEY = 'hms_notif_read_at';
 const NOTIF_MAX_ITEMS = 6;
+/* Doctor "new appointment" tracking: assignment ids the doctor has
+   already seen (localStorage 'hms_notif_seen_assignments'). An
+   assignment whose id is not in the list is "New" and shows a badge
+   + the red dot. Opening the bell marks every current assignment
+   seen. On the very first run the list is seeded with the current
+   ids, so existing appointments don't all flood in as "New". */
+const NOTIF_SEEN_ASSIGNMENTS_KEY = 'hms_notif_seen_assignments';
+const NOTIF_WAITING_MAX_AGE_MS = 60 * 60 * 1000; /* a waiting patient counts for 60 minutes */
+const NOTIF_POLL_MS = 30000; /* doctor panel only: re-check every 30 seconds */
+
+function _notifSeenAssignments() {
+  try {
+    const v = JSON.parse(localStorage.getItem(NOTIF_SEEN_ASSIGNMENTS_KEY) || '[]');
+    return Array.isArray(v) ? v.map(Number).filter(n => !isNaN(n)) : [];
+  } catch (e) { return []; }
+}
+function _notifHasSeenList() {
+  try { return localStorage.getItem(NOTIF_SEEN_ASSIGNMENTS_KEY) !== null; } catch (e) { return false; }
+}
+function _notifMarkAssignmentsSeen(ids) {
+  try {
+    const seen = new Set(_notifSeenAssignments());
+    (ids || []).forEach(id => seen.add(Number(id)));
+    localStorage.setItem(NOTIF_SEEN_ASSIGNMENTS_KEY, JSON.stringify(Array.from(seen).slice(-200)));
+  } catch (e) {}
+}
 
 function _notifReadAt() {
   try {
@@ -757,40 +787,88 @@ async function _notifPatientItems() {
   return { items, failed: false };
 }
 
-/* Doctor items: upcoming Confirmed/Scheduled appointments with the
-   patient name. DID is resolved exactly like the doctor panel:
-   cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()). */
+/* Doctor items — TWO live notification types:
+   (1) NEW APPOINTMENT ASSIGNED: an assignment whose id is not in
+   the seen list shows with a "New" badge (the first run seeds the
+   list, so old appointments don't flood in as new).
+   (2) PATIENT WAITING FOR VIDEO CALL: a Confirmed appointment
+   whose patient_waiting_at is set and less than 60 minutes old
+   shows first, in red, with a "Waiting" badge and a one-click
+   link straight into the video call. The flag is set by the
+   patient's video-call page on join and cleared when the doctor
+   joins or the call ends (see video-call.js).
+   DID + doctor name are resolved exactly like the doctor panel:
+   cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()).
+   Returns { items, failed, unread, assignmentIds } — unread drives
+   the red dot (any New or Waiting item); assignmentIds lets the
+   bell mark everything seen when the doctor opens it. */
 async function _notifDoctorItems() {
   if (typeof DoctorsAPI === 'undefined')
     return { items: [], failed: true };
   let did = null;
+  let doctorName = '';
   try { const c = sessionStorage.getItem('hms_did'); if (c) did = parseInt(c, 10); } catch (e) {}
+  try { doctorName = sessionStorage.getItem('hms_doctor_name') || ''; } catch (e) {}
   if (!did) {
     const email = (typeof getMyEmail === 'function') ? getMyEmail() : '';
     if (!email) return { items: [], failed: false };
     const res = await DoctorsAPI.byEmail(email);
     if (res && res.doctor) {
       did = res.doctor.doctor_id;
+      doctorName = [res.doctor.first_name, res.doctor.last_name].filter(Boolean).join(' ');
       try { sessionStorage.setItem('hms_did', String(did)); } catch (e) {}
+      try { sessionStorage.setItem('hms_doctor_name', doctorName); } catch (e) {}
     }
   }
   if (!did) return { items: [], failed: false }; /* no doctor profile yet */
   const aRes = await DoctorsAPI.forDoctor(did);
   if (!aRes) return { items: [], failed: true };
+  const rows = (aRes && aRes.assignments) || [];
+  const assignmentIds = rows.map(a => a.assignment_id);
+  /* First run: seed the seen list with what already exists, so
+     only appointments assigned AFTER this count as "New". The seed
+     must happen BEFORE the set is built, or the first run floods
+     every existing appointment in as "New". */
+  if (!_notifHasSeenList()) _notifMarkAssignmentsSeen(assignmentIds);
+  const seen = new Set(_notifSeenAssignments());
   const items = [];
-  ((aRes && aRes.assignments) || [])
+  rows
     .filter(a => a.status === 'Confirmed' || a.status === 'Scheduled')
     .forEach(a => {
       const when = _notifFmtDateTime(a.appointment_date);
+      const waitingTs = _notifTs(a.patient_waiting_at);
+      const isWaiting = a.status === 'Confirmed' && waitingTs > 0
+        && (Date.now() - waitingTs) <= NOTIF_WAITING_MAX_AGE_MS;
+      if (isWaiting) {
+        const callUrl = resolveRoot('video-call.html')
+          + '?assignment_id=' + a.assignment_id
+          + '&role=doctor&doctor_name=' + encodeURIComponent(doctorName || '')
+          + '&appointment_date=' + encodeURIComponent(a.appointment_date || '');
+        items.push({
+          color: 'var(--red-500)',
+          badge: 'Waiting',
+          badgeKind: 'waiting',
+          isNew: true,
+          text: `Patient ${a.patient_name || 'Patient'} is waiting for the video call — Appointment #${a.assignment_id}`,
+          time: `Waiting since ${_notifFmtDateTime(a.patient_waiting_at)} · Join now`,
+          ts: waitingTs,
+          href: callUrl,
+        });
+        return;
+      }
+      const isNew = !seen.has(Number(a.assignment_id));
       items.push({
         color: a.status === 'Confirmed' ? 'var(--green-500)' : 'var(--blue-500)',
+        badge: isNew ? 'New' : '',
+        badgeKind: isNew ? 'new' : '',
+        isNew: isNew,
         text: `Appointment #${a.assignment_id} with ${a.patient_name || 'Patient'}${when ? ' — ' + when : ''}`,
         time: a.status || '',
         ts: _notifTs(a.appointment_date),
         href: resolveRoot('doctor/my-appointments.html'),
       });
     });
-  return { items, failed: false };
+  return { items, failed: false, unread: items.some(it => it.isNew), assignmentIds };
 }
 
 /* Admin items: pending dues + pending lab orders + low-stock medicines.
@@ -863,7 +941,7 @@ function _notifRenderList(dd, result) {
     <a class="notification-item" href="${_notifEscape(it.href)}">
       <div class="notif-dot-wrap"><div class="notif-dot" style="background:${it.color}"></div></div>
       <div class="notif-body">
-        <div class="notif-text">${_notifEscape(it.text)}</div>
+        <div class="notif-text">${_notifEscape(it.text)}${it.badge ? ` <span class="notif-badge notif-badge-${it.badgeKind || 'new'}">${_notifEscape(it.badge)}</span>` : ''}</div>
         ${it.time ? `<div class="notif-time">${_notifEscape(it.time)}</div>` : ''}
       </div>
     </a>`).join('');
@@ -894,7 +972,12 @@ async function _notifToggle() {
   const result = await _notifFetchItems();
   if (dd.hidden) return; /* closed while loading — don't reopen it */
   _notifRenderList(dd, result);
-  if (!result.failed) { _notifMarkRead(); _notifSetDot(false); }
+  if (!result.failed) {
+    _notifMarkRead(); _notifSetDot(false);
+    /* Doctor: opening the bell marks every current appointment
+       seen, so "New" badges clear until the next new one arrives. */
+    if (result.assignmentIds) _notifMarkAssignmentsSeen(result.assignmentIds);
+  }
 }
 
 /* Background dot state — never blocks the page. A failed fetch leaves
@@ -904,7 +987,11 @@ function _notifRefreshDot() {
     if (result.failed) return;
     const items = result.items || [];
     const readAt = _notifReadAt();
-    const unread = items.length > 0 && (readAt <= 0 || items.some(it => it.ts > readAt));
+    /* The doctor branch reports unread directly (any New or
+       Waiting item); patient/admin keep the read-timestamp rule. */
+    const unread = (typeof result.unread === 'boolean')
+      ? result.unread
+      : (items.length > 0 && (readAt <= 0 || items.some(it => it.ts > readAt)));
     _notifSetDot(unread);
   }).catch(() => {});
 }
@@ -922,6 +1009,24 @@ function _initNotifBell() {
     dd.innerHTML = `<div class="notif-dropdown-header">Notifications</div><div class="notif-list"></div>`;
     const wrap = btn.closest('.topbar-notif-wrap') || btn.parentElement;
     (wrap || document.body).appendChild(dd);
+  }
+  /* Doctor panel only: poll every 30 seconds so a new appointment
+     or a waiting patient shows up without a page refresh (the red
+     dot and the open dropdown both refresh). Patient/admin
+     behaviour is unchanged — one fetch on load. Guarded so a
+     topbar re-render never starts a second interval. */
+  if (_notifRole() === 'doctor' && !window._notifPollId) {
+    window._notifPollId = setInterval(function () {
+      _notifRefreshDot();
+      const openDd = document.getElementById('notifDropdown');
+      if (openDd && !openDd.hidden) {
+        _notifFetchItems().then(function (result) {
+          const panel = document.getElementById('notifDropdown');
+          if (!panel || panel.hidden || result.failed) return;
+          _notifRenderList(panel, result);
+        }).catch(function () {});
+      }
+    }, NOTIF_POLL_MS);
   }
   btn.addEventListener('click', (e) => { e.stopPropagation(); _notifToggle(); });
   /* Close when clicking anywhere outside the panel (or pressing Escape).

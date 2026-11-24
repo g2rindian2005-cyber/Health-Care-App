@@ -96,8 +96,12 @@ function _refreshTokenIfNeeded() {
   });
 }
 
-/** Central request wrapper with auth + error handling */
+/** Central request wrapper with auth + error handling.
+    options.quiet: true suppresses the error toasts — for best-effort
+    background calls (e.g. the patient-waiting flag) that must never
+    pop an error in front of the user. */
 async function request(path, options = {}) {
+  const { quiet, ...fetchOptions } = options;
   const url = `${API_BASE_URL}${path}`;
   const headers = {
     "Content-Type": "application/json",
@@ -107,11 +111,11 @@ async function request(path, options = {}) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
-    const res = await fetch(url, { ...options, headers });
+    const res = await fetch(url, { ...fetchOptions, headers });
     const data = await res.json();
     if (!res.ok) {
       const msg = data?.error || data?.message || `HTTP ${res.status}`;
-      showToast(msg, "error");
+      if (!quiet) showToast(msg, "error");
       return null;
     }
     return data;
@@ -123,7 +127,7 @@ async function request(path, options = {}) {
       return mockFallback(path, options);
     }
     console.warn(`[API] ${path} failed:`, err.message);
-    if (typeof showToast === "function") {
+    if (!quiet && typeof showToast === "function") {
       try { showToast("Unable to reach the server. Please check your connection and try again.", "error"); } catch (e) {}
     }
     return null;
@@ -182,6 +186,12 @@ const DoctorsAPI = {
   forPatient:      (pid)     => request(`/assignments/patient/${pid}`),
   assign:         (body)    => request("/assignments",         { method: "POST",   body: JSON.stringify(body) }),
   updateAssign:   (id, b)   => request(`/assignments/${id}`,   { method: "PUT",    body: JSON.stringify(b) }),
+  /* Patient-waiting flag (video call): set to an ISO timestamp when
+     the patient joins the room, null to clear it. Quiet + keepalive
+     so a best-effort save never toasts and still goes out when the
+     tab closes. The doctor may only clear this one field on their
+     own appointment; the patient may only touch their own. */
+  setWaiting:     (id, ts)  => request(`/assignments/${id}`,   { method: "PUT",    body: JSON.stringify({ patient_waiting_at: ts }), quiet: true, keepalive: true }),
   removeAssign:   (id)      => request(`/assignments/${id}`,   { method: "DELETE" }),
 };
 

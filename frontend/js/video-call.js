@@ -67,6 +67,24 @@ async function recordConsultation(assignmentId, doctorName, durationMinutes) {
   }
 }
 
+/* ── Patient-waiting flag ─────────────────────────────────────
+   When the PATIENT joins the room, mark the assignment "patient
+   is waiting" (an ISO timestamp) so the doctor's bell shows a
+   red "Patient is waiting — join now" item. When the DOCTOR
+   joins, or the call ends, or the patient leaves, clear it
+   (null removes the attribute in DynamoDB). Best-effort: a
+   failed save never breaks the call. */
+async function setPatientWaiting(assignmentId, waiting) {
+  try {
+    if (!assignmentId || typeof DoctorsAPI === 'undefined' || !DoctorsAPI.setWaiting) return false;
+    var ts = waiting ? new Date().toISOString() : null;
+    var res = await DoctorsAPI.setWaiting(assignmentId, ts);
+    return res !== null && res !== undefined;
+  } catch (e) {
+    return false;
+  }
+}
+
 /* ── Jitsi call controller ────────────────────────────────── */
 var VideoCall = (function () {
   var api = null;

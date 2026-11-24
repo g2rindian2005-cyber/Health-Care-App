@@ -1261,6 +1261,11 @@ textarea.form-control { resize: vertical; min-height: 90px; line-height: 1.5; }
 .notif-body { flex: 1; }
 .notif-text { font-size: 13px; color: var(--gray-700); line-height: 1.45; }
 .notif-time { font-size: 11.5px; color: var(--gray-400); margin-top: 2px; }
+/* Doctor bell badges: "New" (newly assigned appointment) and
+   "Waiting" (patient is in the video-call room right now). */
+.notif-badge { display: inline-block; font-size: 10.5px; font-weight: 700; line-height: 1; padding: 3px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.notif-badge-new { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.45); }
+.notif-badge-waiting { background: rgba(239,68,68,.18); color: #fca5a5; border: 1px solid rgba(239,68,68,.5); }
 
 /* Topbar notification bell + dropdown (injected by ui.js _initNotifBell).
    Anchored under the bell via .topbar-notif-wrap; inherits the

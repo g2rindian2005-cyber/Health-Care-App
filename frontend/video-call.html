@@ -240,6 +240,11 @@
           role === 'patient'
             ? 'Tum video room me ho — doctor ke join karte hi consultation shuru hogi. Doctor apne appointments page se isi room me join karenge.'
             : 'Tum video room me ho — patient ke join karte hi consultation shuru hogi. Patient apni appointment se isi room me join karega.';
+        /* Waiting flag: a patient joining marks "patient is waiting"
+           for the doctor's bell; a doctor joining clears it (the
+           patient is no longer waiting — the call is on). */
+        if (role === 'patient') setPatientWaiting(asg.assignment_id, true);
+        else setPatientWaiting(asg.assignment_id, false);
       },
       onPeerJoined: function () {
         setStatus('Consultation in progress', 'live');
@@ -299,6 +304,9 @@
 
   async function finishCall(result) {
     if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
+    /* Clear the waiting flag on call end (either side) — the
+       patient is no longer waiting. Best-effort. */
+    if (asg) setPatientWaiting(asg.assignment_id, false);
     hide('callStage');
     setStatus('Ended', 'ended');
     var durationText = formatCallDuration(result.durationSeconds);
@@ -335,6 +343,15 @@
       : '<a href="doctors/appointments.html" class="btn btn-primary">Back to Appointments</a><a href="dashboard.html" class="btn btn-outline">Dashboard</a>';
     show('summaryWrap');
   }
+
+  /* If the patient closes the tab mid-call, clear the waiting
+     flag best-effort (the doctor's bell also stops showing it
+     60 minutes after the patient joined). */
+  window.addEventListener('pagehide', function () {
+    if (role === 'patient' && callJoined && asg) {
+      try { setPatientWaiting(asg.assignment_id, false); } catch (e) {}
+    }
+  });
 
   init();
 </script>

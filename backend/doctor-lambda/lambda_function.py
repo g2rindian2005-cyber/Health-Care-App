@@ -56,10 +56,9 @@ import os
 # never contained — the import silently failed and no appointment email
 # was ever sent.)
 try:
-    from send_email import send_appointment_email, send_doctor_appointment_email  # noqa: E402
+    from send_email import send_appointment_email  # noqa: E402
 except Exception:
     send_appointment_email = None
-    send_doctor_appointment_email = None
 
 
 def _body(event):
@@ -385,6 +384,7 @@ def _dispatch(event, context):
                 "status": a.get("status"),
                 "room_number": a.get("room_number"),
                 "notes": a.get("notes"),
+                "patient_waiting_at": a.get("patient_waiting_at"),
                 "patient_name": full_name(_pnames.get(a.get("patient_id"))),
                 "disease_name": (_dnames.get(a.get("disease_id")) or {}).get("disease_name"),
             })
@@ -469,30 +469,31 @@ def _dispatch(event, context):
                                        d.get("appointment_date", ""))
             except Exception:
                 pass
-        # Notify the assigned doctor as well ("New Appointment
-        # Assigned"). Best-effort only: a failed email must never
-        # break the assignment response, and a doctor with no email
-        # on file is skipped silently.
-        if send_doctor_appointment_email and doc.get("email"):
-            try:
-                send_doctor_appointment_email(
-                    doc["email"], full_name(doc) or "", full_name(p) or "",
-                    p.get("patient_id"), asg_id,
-                    d.get("appointment_date", ""), d.get("status", "Assigned"),
-                    d.get("room_number"), doc.get("consultation_fee"))
-            except Exception:
-                pass
         return _json(201, {"message": "Doctor assigned", "assignment_id": asg_id})
 
     if method == "PUT" and resource.endswith("/assignments/{assignment_id}"):
         aid = int(_pp(event, "assignment_id"))
         d = _body(event)
         _row = get_item(ASSIGNMENTS, aid)
+        # Waiting-flag-only update by the assigned doctor: the doctor
+        # clears "patient is waiting" when joining the video call.
+        # This is the ONLY assignment write a doctor may make — the
+        # general rule below still blocks every other doctor write
+        # (assigning stays the admin's job). Admin/patient callers
+        # fall through to the normal auth check.
+        if _row and set(d.keys()) == {"patient_waiting_at"}:
+            _payload, _role = _caller(event)
+            if _role == "doctor":
+                _my_did = _doctor_did_for_email(_payload.get("email")) if _payload else None
+                if _my_did is not None and int(_row.get("doctor_id") or 0) == int(_my_did):
+                    update_item(ASSIGNMENTS, aid, {"patient_waiting_at": d.get("patient_waiting_at")})
+                    return _json(200, {"message": "Assignment updated", "assignment_id": aid})
+                return _json(403, {"error": "This appointment is not yours"})
         _auth_err = _assignment_auth(event, get_item(PATIENTS, _row.get("patient_id")) if _row else None)
         if _auth_err:
             return _auth_err
         fields = ["patient_id", "doctor_id", "disease_id", "appointment_date",
-                  "status", "room_number", "notes"]
+                  "status", "room_number", "notes", "patient_waiting_at"]
         changes = {f: d[f] for f in fields if f in d}
         if not changes:
             return _json(400, {"error": "No fields to update"})
@@ -501,10 +502,8 @@ def _dispatch(event, context):
                 changes[k] = int(changes[k])
         update_item(ASSIGNMENTS, aid, changes)
         # Appointment confirmed -> notify the patient by email ("Your
-        # appointment is confirmed") and the assigned doctor as well
-        # ("Appointment Confirmed"). Best-effort only: a failed email
-        # must never break the API response, and each send is
-        # independent, so one failing never blocks the other.
+        # appointment is confirmed"). Best-effort only: a failed
+        # email must never break the API response.
         if _row and changes.get("status") == "Confirmed":
             try:
                 _p = get_item(PATIENTS, int(_row.get("patient_id")))
@@ -520,14 +519,6 @@ def _dispatch(event, context):
                         send_appointment_email(_p["email"], _pid,
                                                aid, _doctor_name,
                                                _date or "")
-                    except Exception:
-                        pass
-                if send_doctor_appointment_email and _doc and _doc.get("email"):
-                    try:
-                        send_doctor_appointment_email(
-                            _doc["email"], _doctor_name, full_name(_p) or "",
-                            _pid, aid, _date or "", "Confirmed",
-                            _room, _doc.get("consultation_fee"))
                     except Exception:
                         pass
             except Exception:
