@@ -57,6 +57,7 @@ ENV = os.environ
 ADMIN_MAIL = ENV.get("AUTH_EMAIL", "")
 ADMIN_PASS = ENV.get("AUTH_" + "PASSWORD", "")
 USERS_TABLE = ENV.get("USERS_TABLE", "")
+DOCTORS_TABLE = ENV.get("DOCTORS_TABLE", "hospital-doctors")
 # NOTE: no COGNITO_USER_POOL_ID env var on purpose — the user pool's
 # lambda_config points at this Lambda, so an env reference to the
 # pool would be a Terraform cycle. The pool id comes from the
@@ -91,6 +92,39 @@ def _check_password(password, stored):
         return False
 
 
+_doctors_table = None
+
+
+def _doctors():
+    global _doctors_table
+    if _doctors_table is None and DOCTORS_TABLE:
+        try:
+            _doctors_table = boto3.resource("dynamodb").Table(DOCTORS_TABLE)
+        except Exception:
+            _doctors_table = False
+    return _doctors_table or None
+
+
+def _get_doctor_by_email(email):
+    """Return the doctor record for an email address, or None.
+
+    The doctors table has no email index, so this scans it — the
+    table is small (one row per doctor) and this runs once per
+    sign-in at most.
+    """
+    table = _doctors()
+    if table is None or "@" not in (email or ""):
+        return None
+    try:
+        wanted = email.strip().lower()
+        for item in table.scan().get("Items", []):
+            if str(item.get("email") or "").strip().lower() == wanted:
+                return item
+    except Exception:
+        return None
+    return None
+
+
 def _get_user(email):
     """Return the user item for an email address, or None."""
     table = _users()
@@ -105,10 +139,13 @@ def _get_user(email):
 def _role_for(email):
     """Role for an already-authenticated user (post-auth trigger).
 
-    Admin email first, then the stored row, else patient.
+    Admin email first, then a doctor record (the doctor's email in
+    hospital-doctors), then the stored row, else patient.
     """
     if ADMIN_MAIL and email == ADMIN_MAIL.lower():
         return "admin"
+    if _get_doctor_by_email(email):
+        return "doctor"
     user = _get_user(email)
     if user and str(user.get("role") or "").lower() == "admin":
         return "admin"
@@ -132,7 +169,12 @@ def _handle_migration(event):
         if not user or not _check_password(password, user.get("password_hash", "")):
             raise Exception("Invalid credentials")
         name = user.get("name") or email
-        role = "admin" if str(user.get("role") or "").lower() == "admin" else "patient"
+        # A doctor's email in hospital-doctors makes them a doctor,
+        # even if their old users-table row says patient.
+        if _get_doctor_by_email(email):
+            role = "doctor"
+        else:
+            role = "admin" if str(user.get("role") or "").lower() == "admin" else "patient"
 
     # Cognito creates the account from these attributes. email_verified
     # avoids a verification loop; SUPPRESS skips the welcome email
@@ -169,7 +211,8 @@ def _handle_post_auth(event):
     pool_id = event.get("userPoolId") or ""
     if not email or not pool_id or not username:
         return event
-    group = "Admins" if _role_for(email) == "admin" else "Patients"
+    _role = _role_for(email)
+    group = "Admins" if _role == "admin" else ("Doctors" if _role == "doctor" else "Patients")
     try:
         boto3.client("cognito-idp").admin_add_user_to_group(
             UserPoolId=pool_id, Username=username, GroupName=group

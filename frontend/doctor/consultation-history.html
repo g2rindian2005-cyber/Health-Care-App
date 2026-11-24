@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consultation History — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Consultation History</h1>
+          <p>Your previous video consultations</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="my-appointments.html" class="btn btn-primary btn-sm">My Appointments</a>
+        </div>
+      </div>
+
+      <!-- No doctor record yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">No doctor record found</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a doctor record for your account yet. Ask the hospital administrator to add your doctor profile with this email address.</p>
+        </div>
+      </div>
+
+      <div id="historyWrap" style="display:none;">
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-teal"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><div class="stat-info"><div class="stat-value" id="totalCalls">—</div><div class="stat-label">Video Consultations</div></div></div>
+          <div class="stat-card stat-blue"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-info"><div class="stat-value" id="totalMinutes">—</div><div class="stat-label">Total Minutes</div></div></div>
+        </div>
+
+        <!-- History table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Past Consultations</h3><p>Video calls saved when you ended them</p></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th><th>Patient</th><th>Appointment</th><th>Duration</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="historyTable"><tr><td colspan="5"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/video-call.js"></script>
+<script>
+  initApp({ page: 'consultation-history', title: 'Consultation History', subtitle: 'My Practice' });
+
+  /* DID is resolved exactly like the patient PID pattern:
+     cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()). */
+  async function resolveMyDoctor() {
+    const cached = sessionStorage.getItem('hms_did');
+    if (cached) return parseInt(cached, 10);
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await DoctorsAPI.byEmail(email);
+    if (res && res.doctor) {
+      const did = res.doctor.doctor_id;
+      try { sessionStorage.setItem('hms_did', String(did)); } catch (e) {}
+      return did;
+    }
+    return null;
+  }
+
+  async function init() {
+    const myDid = await resolveMyDoctor();
+    if (!myDid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('historyWrap').style.display = 'block';
+
+    /* History lives in the assignment notes as "[VIDEO-CALL …]"
+       records (written by video-call.js on End Call). The
+       forDoctor rows include notes. */
+    const data = await DoctorsAPI.forDoctor(myDid);
+    const appts = (data && data.assignments) || [];
+    const calls = [];
+    appts.forEach(function (a) {
+      parseVideoCallRecords(a.notes).forEach(function (r) {
+        calls.push({
+          date: r.date,
+          minutes: r.minutes,
+          patient: (a.patient_name || 'Patient') + (a.patient_id ? ' (PID ' + a.patient_id + ')' : ''),
+          assignmentId: a.assignment_id,
+          appointmentDate: a.appointment_date
+        });
+      });
+    });
+    calls.sort(function (x, y) { return new Date(y.date) - new Date(x.date); });
+
+    document.getElementById('totalCalls').textContent = calls.length;
+    document.getElementById('totalMinutes').textContent =
+      calls.reduce(function (sum, c) { return sum + (c.minutes || 0); }, 0) + ' min';
+
+    document.getElementById('historyTable').innerHTML = calls.length
+      ? calls.map(function (c) {
+          return '<tr>' +
+            '<td class="fw-600">' + c.date + '</td>' +
+            '<td class="fw-600">' + c.patient + '</td>' +
+            '<td class="text-muted">Appointment #' + c.assignmentId + (c.appointmentDate ? ' · ' + String(c.appointmentDate).slice(0, 16) : '') + '</td>' +
+            '<td>' + c.minutes + ' min</td>' +
+            '<td>' + statusBadge('Completed') + '</td>' +
+            '</tr>';
+        }).join('')
+      : '<tr><td colspan="5"><div class="empty-state"><h4>No video consultations yet</h4><p>Your completed video consultations will appear here. Join a video call from a Confirmed appointment to start one.</p></div></td></tr>';
+  }
+
+  init();
+</script>
+</body>
+</html>

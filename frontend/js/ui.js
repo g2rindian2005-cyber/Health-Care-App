@@ -8,7 +8,7 @@
       project sites under /<repo>/), so detect the module folder by name. ── */
 function _prefix() {
   const parts = window.location.pathname.split('/').filter(Boolean);
-  const MODULE_DIRS = ['patients', 'billing', 'diseases', 'doctors', 'laboratory', 'pharmacy', 'patient'];
+  const MODULE_DIRS = ['patients', 'billing', 'diseases', 'doctors', 'laboratory', 'pharmacy', 'patient', 'doctor'];
   return parts.some(p => MODULE_DIRS.includes(p)) ? '../' : '';
 }
 
@@ -398,6 +398,80 @@ function buildPatientSidebarHTML() {
 </div>`;
 }
 
+/* ── Doctor sidebar: only the doctor panel pages ──────────
+   Shown when the signed-in account has role "doctor". The admin
+   modules (Patients / Billing / Doctors / Lab / Pharmacy) and the
+   patient panel are not listed here at all — a doctor sees only
+   their own appointments, patients and consultations. */
+function buildDoctorSidebarHTML() {
+  const p = _prefix();
+  return `
+<div class="sidebar-header">
+  <div class="sidebar-logo-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  </div>
+  <span class="sidebar-brand-name">Healthe<span>Care</span></span>
+  <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+  </button>
+</div>
+
+<nav class="sidebar-nav">
+  <div class="nav-group">
+    <span class="nav-group-label">My Practice</span>
+    <a href="${p}doctor/my-appointments.html" class="nav-item" data-page="my-appointments">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>
+        </svg>
+      </span>
+      My Appointments
+    </a>
+    <a href="${p}doctor/my-patients.html" class="nav-item" data-page="my-patients">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </span>
+      My Patients
+    </a>
+    <a href="${p}doctor/consultation-history.html" class="nav-item" data-page="consultation-history">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+        </svg>
+      </span>
+      Consultation History
+    </a>
+  </div>
+</nav>
+
+<div class="sidebar-footer">
+  <div class="sidebar-user">
+    <div class="sidebar-user-avatar" id="sidebarUserAvatar">D</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarUserName">Doctor</div>
+      <div class="sidebar-user-role">Doctor</div>
+    </div>
+  </div>
+  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealtheCare · by Gokul Rathod</div>
+  <a href="${p}login.html" class="nav-item" id="logoutBtn" style="color:var(--red-600); margin-top:4px;">
+    <span class="nav-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+      </svg>
+    </span>
+    Logout
+  </a>
+</div>`;
+}
+
 /* ── Topbar HTML ──────────────────────────────────────────── */
 function buildTopbar(title, subtitle) {
   const p = _prefix();
@@ -459,17 +533,22 @@ function initApp(opts = {}) {
     return;
   }
 
-  /* Role guard: patients stay in the patient panel, admins in the admin app.
-     No role stored yet (e.g. an old session) means patient — the safe
-     default is patient, never admin. */
+  /* Role guard: each role stays in its own area — patients in the
+     patient panel, doctors in the doctor panel, admins in the admin
+     app. No role stored yet (e.g. an old session) means patient —
+     the safe default is patient, never admin. Note: '/doctor/' does
+     not match the admin '/doctors/' module folder (the "s" breaks
+     the match), so the two areas stay distinct. */
   const _role = localStorage.getItem('hms_role') || sessionStorage.getItem('hms_role') || 'patient';
   const _inPatientArea = window.location.pathname.includes('/patient/');
-  if (_role === 'patient' && !_inPatientArea) {
-    window.location.href = resolveRoot('patient/my-appointments.html');
-    return;
-  }
-  if (_role !== 'patient' && _inPatientArea) {
-    window.location.href = resolveRoot('dashboard.html');
+  const _inDoctorArea = window.location.pathname.includes('/doctor/');
+  const _homeFor = { patient: 'patient/my-appointments.html', doctor: 'doctor/my-appointments.html', admin: 'dashboard.html' };
+  const _home = _homeFor[_role] || _homeFor.patient;
+  const _inOwnArea = (_role === 'patient' && _inPatientArea)
+    || (_role === 'doctor' && _inDoctorArea)
+    || (_role === 'admin' && !_inPatientArea && !_inDoctorArea);
+  if (!_inOwnArea) {
+    window.location.href = resolveRoot(_home);
     return;
   }
 
@@ -486,7 +565,8 @@ function initApp(opts = {}) {
     sidebar.className = 'sidebar';
     document.body.prepend(sidebar);
   }
-  sidebar.innerHTML = _role === 'patient' ? buildPatientSidebarHTML() : buildSidebarHTML();
+  sidebar.innerHTML = _role === 'patient' ? buildPatientSidebarHTML()
+    : _role === 'doctor' ? buildDoctorSidebarHTML() : buildSidebarHTML();
 
   /* Inject topbar */
   let topbar = document.querySelector('.topbar');
@@ -577,7 +657,8 @@ function initApp(opts = {}) {
 /* ── Notifications (topbar bell) ──────────────────────────────
    The bell opens a dropdown fed by LIVE API data only — no mock or
    hardcoded items. Patient: upcoming Confirmed/Scheduled appointments
-   + Pending bills. Admin: pending dues + pending lab orders +
+   + Pending bills. Doctor: upcoming Confirmed/Scheduled appointments
+   with the patient name. Admin: pending dues + pending lab orders +
    low-stock medicines. Opening the dropdown marks everything read
    (localStorage 'hms_notif_read_at'); the red dot only shows while
    unread items exist. Every fetch is best-effort: a failed fetch shows
@@ -676,6 +757,42 @@ async function _notifPatientItems() {
   return { items, failed: false };
 }
 
+/* Doctor items: upcoming Confirmed/Scheduled appointments with the
+   patient name. DID is resolved exactly like the doctor panel:
+   cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()). */
+async function _notifDoctorItems() {
+  if (typeof DoctorsAPI === 'undefined')
+    return { items: [], failed: true };
+  let did = null;
+  try { const c = sessionStorage.getItem('hms_did'); if (c) did = parseInt(c, 10); } catch (e) {}
+  if (!did) {
+    const email = (typeof getMyEmail === 'function') ? getMyEmail() : '';
+    if (!email) return { items: [], failed: false };
+    const res = await DoctorsAPI.byEmail(email);
+    if (res && res.doctor) {
+      did = res.doctor.doctor_id;
+      try { sessionStorage.setItem('hms_did', String(did)); } catch (e) {}
+    }
+  }
+  if (!did) return { items: [], failed: false }; /* no doctor profile yet */
+  const aRes = await DoctorsAPI.forDoctor(did);
+  if (!aRes) return { items: [], failed: true };
+  const items = [];
+  ((aRes && aRes.assignments) || [])
+    .filter(a => a.status === 'Confirmed' || a.status === 'Scheduled')
+    .forEach(a => {
+      const when = _notifFmtDateTime(a.appointment_date);
+      items.push({
+        color: a.status === 'Confirmed' ? 'var(--green-500)' : 'var(--blue-500)',
+        text: `Appointment #${a.assignment_id} with ${a.patient_name || 'Patient'}${when ? ' — ' + when : ''}`,
+        time: a.status || '',
+        ts: _notifTs(a.appointment_date),
+        href: resolveRoot('doctor/my-appointments.html'),
+      });
+    });
+  return { items, failed: false };
+}
+
 /* Admin items: pending dues + pending lab orders + low-stock medicines.
    Only endpoints that exist in js/api.js are used. */
 async function _notifAdminItems() {
@@ -719,7 +836,10 @@ async function _notifAdminItems() {
 
 async function _notifFetchItems() {
   try {
-    return _notifRole() === 'patient' ? await _notifPatientItems() : await _notifAdminItems();
+    const role = _notifRole();
+    if (role === 'patient') return await _notifPatientItems();
+    if (role === 'doctor') return await _notifDoctorItems();
+    return await _notifAdminItems();
   } catch (e) {
     return { items: [], failed: true };
   }

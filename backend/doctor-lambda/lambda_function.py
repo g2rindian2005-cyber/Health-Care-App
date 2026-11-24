@@ -5,17 +5,24 @@ Lambda handler for the DOCTOR tables (DynamoDB `hospital-doctors` and
 Routes:
     GET    /doctors                         -> list all doctors
     GET    /doctors/{id}                     -> get one doctor (+ assigned patients)
-    POST   /doctors                          -> add a doctor
-    PUT    /doctors/{id}                     -> update a doctor
-    DELETE /doctors/{id}                     -> delete a doctor
+    GET    /doctors/by-email/{email}         -> find a doctor by email (doctor panel)
+    POST   /doctors                          -> add a doctor (admin only)
+    PUT    /doctors/{id}                     -> update a doctor (admin only)
+    DELETE /doctors/{id}                     -> delete a doctor (admin only)
 
-    GET    /assignments                      -> all assignments (synced with all tables)
-    GET    /assignments/{id}                 -> one assignment
-    GET    /assignments/doctor/{did}         -> assignments for a doctor
-    GET    /assignments/patient/{pid}        -> assignments for a patient (patients: own record only)
-    POST   /assignments                      -> assign doctor to patient (validates both; patients: own PID only)
-    PUT    /assignments/{id}                 -> update an assignment
-    DELETE /assignments/{id}                 -> delete an assignment
+    GET    /assignments                      -> all assignments (admin only)
+    GET    /assignments/{id}                 -> one assignment (admin, own doctor, or own patient)
+    GET    /assignments/doctor/{did}         -> assignments for a doctor (admin, or that doctor)
+    GET    /assignments/patient/{pid}        -> assignments for a patient (admin, own patient, or their doctor)
+    POST   /assignments                      -> assign doctor to patient (validates both; patients: own PID only; doctors cannot assign)
+    PUT    /assignments/{id}                 -> update an assignment (admin or own patient; doctors cannot change)
+    DELETE /assignments/{id}                 -> delete an assignment (admin or own patient; doctors cannot change)
+
+Ownership: the token role comes from cognito_auth.role_from_payload
+("admin" / "doctor" / "patient"). A doctor is matched to their
+doctor record by token email and may only touch their own
+assignments and assigned patients; a patient only their own PID;
+an admin may touch anything.
 
 DynamoDB migration: the old code read MySQL on RDS via db_connection.
 All reads/writes now go through dynamodb.py (boto3). Routes,
@@ -76,27 +83,84 @@ def _json(status, payload):
     }
 
 
-def _assignment_auth(event, patient):
-    """Ownership check for assignment reads/writes.
+def _caller(event):
+    """Verify the caller's Cognito token.
 
-    Returns None when the caller may proceed, else an error response
-    (a _json dict) the route should return directly.
-    Admins may touch any patient; a patient may only touch the
-    patient record whose email matches their Cognito token email.
-    Admin behaviour is unchanged: a missing patient record is left
-    to the route's own handling. The token is verified by
-    cognito_auth (RS256/JWKS); a missing or invalid token is a 401.
+    Returns (payload, role), or (None, None) when there is no token
+    or it does not verify. A missing or invalid token fails closed
+    (401) on the routes that call this.
     """
     headers = event.get("headers") or {}
     auth = headers.get("Authorization") or headers.get("authorization") or ""
     token = auth[7:] if auth.startswith("Bearer ") else ""
     payload = _verify_token(token) if token else None
     if not payload:
+        return None, None
+    return payload, role_from_payload(payload)
+
+
+def _doctor_did_for_email(email):
+    """Doctor id for a token email, or None.
+
+    The doctors table has no email index, so this scans it — the
+    table is small (one row per doctor) and this is only needed on
+    doctor-scoped calls.
+    """
+    if not email or "@" not in email:
+        return None
+    wanted = str(email).strip().lower()
+    for r in scan_all(DOCTORS):
+        if str(r.get("email") or "").strip().lower() == wanted:
+            return r.get("doctor_id")
+    return None
+
+
+def _patient_pid_for_email(email):
+    """Patient id for a token email, or None."""
+    if not email or "@" not in email:
+        return None
+    wanted = str(email).strip().lower()
+    for r in scan_all(PATIENTS):
+        if str(r.get("email") or "").strip().lower() == wanted:
+            return r.get("patient_id")
+    return None
+
+
+def _doctor_owns_patient(did, pid):
+    """True when the doctor has an assignment with this patient."""
+    if not did or not pid:
+        return False
+    rows = query_index(ASSIGNMENTS, "doctor_id-index", "doctor_id", did)
+    return any(int(r.get("patient_id") or 0) == int(pid) for r in rows)
+
+
+def _assignment_auth(event, patient):
+    """Ownership check for assignment reads/writes.
+
+    Returns None when the caller may proceed, else an error response
+    (a _json dict) the route should return directly.
+    Admins may touch any patient; a patient may only touch the
+    patient record whose email matches their Cognito token email;
+    a doctor may only touch a patient assigned to them — and only
+    on reads (GET): doctors never create, update or delete
+    assignments (assigning is the admin's job). The token is
+    verified by cognito_auth (RS256/JWKS); a missing or invalid
+    token is a 401.
+    """
+    payload, role = _caller(event)
+    if not payload:
         return _json(401, {"error": "Please sign in again"})
-    if role_from_payload(payload) == "admin":
+    if role == "admin":
         return None
     if not patient:
         return _json(404, {"error": "Patient not found"})
+    if role == "doctor":
+        if (event.get("httpMethod") or "GET") != "GET":
+            return _json(403, {"error": "Doctors cannot change assignments"})
+        did = _doctor_did_for_email(payload.get("email"))
+        if did and _doctor_owns_patient(did, patient.get("patient_id")):
+            return None
+        return _json(403, {"error": "This patient is not assigned to you"})
     if str(patient.get("email") or "").strip().lower() != str(payload.get("email") or "").strip().lower():
         return _json(403, {"error": "You can only book appointments for yourself"})
     return None
@@ -123,7 +187,10 @@ def _dispatch(event, context):
     # concrete path back to the route templates matched below.
     _seg = [s for s in (event.get("path") or "").split("/") if s]
     _ppx = dict(event.get("pathParameters") or {})
-    if len(_seg) == 2 and _seg[0] == "doctors":
+    if len(_seg) == 3 and _seg[0] == "doctors" and _seg[1] == "by-email":
+        _ppx["email"] = _seg[2]
+        resource = "/doctors/by-email/{email}"
+    elif len(_seg) == 2 and _seg[0] == "doctors":
         _ppx["doctor_id"] = _seg[1]
         resource = "/doctors/{doctor_id}"
     elif len(_seg) == 3 and _seg[0] == "assignments" and _seg[1] == "doctor":
@@ -150,8 +217,39 @@ def _dispatch(event, context):
         rows = [{k: r[k] for k in cols if k in r} for r in rows]
         return _json(200, {"count": len(rows), "doctors": rows})
 
+    # {"doctor": {...}} or {"doctor": null} when this email has no
+    # doctor record yet (the doctor panel then shows the no-profile
+    # card). Mirrors GET /patients/by-email/{email}.
+    if method == "GET" and resource.endswith("/doctors/by-email/{email}"):
+        from urllib.parse import unquote
+        email = unquote(_pp(event, "email") or "").strip().lower()
+        match = next(
+            (r for r in scan_all(DOCTORS)
+             if str(r.get("email") or "").strip().lower() == email),
+            None,
+        )
+        if not match:
+            return _json(200, {"doctor": None})
+        cols = ["doctor_id", "first_name", "last_name", "specialization",
+                "department", "phone", "email", "availability", "consultation_fee"]
+        return _json(200, {"doctor": {k: match[k] for k in cols if k in match}})
+
     if method == "GET" and resource.endswith("/doctors/{doctor_id}"):
         did = int(_pp(event, "doctor_id"))
+        payload, role = _caller(event)
+        if not payload:
+            return _json(401, {"error": "Please sign in again"})
+        _my_pid = None
+        if role == "doctor":
+            if _doctor_did_for_email(payload.get("email")) != did:
+                return _json(403, {"error": "You can only view your own record"})
+        elif role == "patient":
+            # A patient may read their own doctor (the confirm and
+            # video-call pages do), but only that doctor — and only
+            # their own appointments with them.
+            _my_pid = _patient_pid_for_email(payload.get("email"))
+            if _my_pid is None or not _doctor_owns_patient(did, _my_pid):
+                return _json(403, {"error": "This doctor is not assigned to you"})
         doc = get_item(DOCTORS, did)
         if not doc:
             return _json(404, {"error": "Doctor not found"})
@@ -162,6 +260,8 @@ def _dispatch(event, context):
         _dnames = fetch_by_ids(DISEASES, [r.get("disease_id") for r in assigned])
         enriched = []
         for a in assigned:
+            if role == "patient" and int(a.get("patient_id") or 0) != int(_my_pid):
+                continue
             enriched.append({
                 "assignment_id": a.get("assignment_id"),
                 "patient_id": a.get("patient_id"),
@@ -174,6 +274,11 @@ def _dispatch(event, context):
         return _json(200, {"doctor": doc, "assigned_patients": enriched})
 
     if method == "POST" and resource.endswith("/doctors"):
+        _payload, _role = _caller(event)
+        if not _payload:
+            return _json(401, {"error": "Please sign in again"})
+        if _role != "admin":
+            return _json(403, {"error": "Only an administrator can add a doctor"})
         d = _body(event)
         if not d.get("first_name") or not d.get("last_name") or not d.get("specialization"):
             return _json(400, {"error": "first_name, last_name and specialization are required"})
@@ -195,6 +300,11 @@ def _dispatch(event, context):
         return _json(201, {"message": "Doctor added", "doctor_id": new_id})
 
     if method == "PUT" and resource.endswith("/doctors/{doctor_id}"):
+        _payload, _role = _caller(event)
+        if not _payload:
+            return _json(401, {"error": "Please sign in again"})
+        if _role != "admin":
+            return _json(403, {"error": "Only an administrator can update a doctor"})
         did = int(_pp(event, "doctor_id"))
         d = _body(event)
         fields = ["first_name", "last_name", "specialization", "department", "phone",
@@ -208,6 +318,11 @@ def _dispatch(event, context):
         return _json(200, {"message": "Doctor updated", "doctor_id": did})
 
     if method == "DELETE" and resource.endswith("/doctors/{doctor_id}"):
+        _payload, _role = _caller(event)
+        if not _payload:
+            return _json(401, {"error": "Please sign in again"})
+        if _role != "admin":
+            return _json(403, {"error": "Only an administrator can delete a doctor"})
         did = int(_pp(event, "doctor_id"))
         delete_item(DOCTORS, did)
         return _json(200, {"message": "Doctor deleted", "doctor_id": did})
@@ -216,6 +331,11 @@ def _dispatch(event, context):
     # ASSIGNMENTS (synchronisation hub)
     # ============================================================
     if method == "GET" and resource.rstrip("/").endswith("/assignments"):
+        _payload, _role = _caller(event)
+        if not _payload:
+            return _json(401, {"error": "Please sign in again"})
+        if _role != "admin":
+            return _json(403, {"error": "Only an administrator can list all appointments"})
         rows = _sort(scan_all(ASSIGNMENTS), "appointment_date")
         _docs = fetch_by_ids(DOCTORS, [r.get("doctor_id") for r in rows])
         _pnames = fetch_by_ids(PATIENTS, [r["patient_id"] for r in rows])
@@ -241,6 +361,14 @@ def _dispatch(event, context):
 
     if method == "GET" and resource.endswith("/assignments/doctor/{doctor_id}"):
         did = int(_pp(event, "doctor_id"))
+        payload, role = _caller(event)
+        if not payload:
+            return _json(401, {"error": "Please sign in again"})
+        if role == "doctor":
+            if _doctor_did_for_email(payload.get("email")) != did:
+                return _json(403, {"error": "You can only view your own appointments"})
+        elif role != "admin":
+            return _json(403, {"error": "Only an administrator or the doctor can view these appointments"})
         rows = _sort(
             query_index(ASSIGNMENTS, "doctor_id-index", "doctor_id", did),
             "appointment_date")
@@ -254,6 +382,8 @@ def _dispatch(event, context):
                 "disease_id": a.get("disease_id"),
                 "appointment_date": a.get("appointment_date"),
                 "status": a.get("status"),
+                "room_number": a.get("room_number"),
+                "notes": a.get("notes"),
                 "patient_name": full_name(_pnames.get(a.get("patient_id"))),
                 "disease_name": (_dnames.get(a.get("disease_id")) or {}).get("disease_name"),
             })
@@ -288,7 +418,20 @@ def _dispatch(event, context):
         row = get_item(ASSIGNMENTS, aid)
         if not row:
             return _json(404, {"error": "Assignment not found"})
-        return _json(200, {"assignment": row})
+        payload, role = _caller(event)
+        if not payload:
+            return _json(401, {"error": "Please sign in again"})
+        if role == "admin":
+            return _json(200, {"assignment": row})
+        if role == "doctor":
+            my_did = _doctor_did_for_email(payload.get("email"))
+            if my_did is not None and int(row.get("doctor_id") or 0) == int(my_did):
+                return _json(200, {"assignment": row})
+            return _json(403, {"error": "This appointment is not yours"})
+        my_pid = _patient_pid_for_email(payload.get("email"))
+        if my_pid is not None and int(row.get("patient_id") or 0) == int(my_pid):
+            return _json(200, {"assignment": row})
+        return _json(403, {"error": "You can only view your own appointments"})
 
     if method == "POST" and resource.endswith("/assignments"):
         d = _body(event)

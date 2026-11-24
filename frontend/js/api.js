@@ -38,15 +38,20 @@ function _tokenPayloadFrom(token) {
 function _tokenPayload() {
   return _tokenPayloadFrom(getToken());
 }
-/** Role from a Cognito token payload: "admin" only when the
+/** Role from a Cognito token payload: "admin" when the
     cognito:groups claim contains "Admins" or the custom:role claim
-    (set by the migration Lambda) is "admin". Anything else —
-    including a token with no groups and no role claim — is a
-    patient. The safe default is patient, never admin. */
+    (set by the migration Lambda) is "admin"; "doctor" when the
+    groups contain "Doctors" or custom:role is "doctor" (the
+    migration Lambda sets it for an email found in
+    hospital-doctors). Anything else — including a token with no
+    groups and no role claim — is a patient. The safe default is
+    patient, never admin. */
 function _roleFromPayload(p) {
   const groups = p["cognito:groups"] || [];
   if (groups.indexOf("Admins") !== -1) return "admin";
+  if (groups.indexOf("Doctors") !== -1) return "doctor";
   if ((p["custom:role"] || "").toLowerCase() === "admin") return "admin";
+  if ((p["custom:role"] || "").toLowerCase() === "doctor") return "doctor";
   return "patient";
 }
 function getMyEmail() { return _tokenPayload().email || ""; }
@@ -166,6 +171,7 @@ const DiseasesAPI = {
 const DoctorsAPI = {
   list:           ()        => request("/doctors"),
   get:            (id)      => request(`/doctors/${id}`),
+  byEmail:        (email)   => request(`/doctors/by-email/${encodeURIComponent(email)}`),
   create:         (body)    => request("/doctors",            { method: "POST",   body: JSON.stringify(body) }),
   update:         (id, b)   => request(`/doctors/${id}`,       { method: "PUT",    body: JSON.stringify(b) }),
   remove:         (id)      => request(`/doctors/${id}`,       { method: "DELETE" }),

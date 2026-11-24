@@ -276,17 +276,23 @@
     store.setItem('hms_user', name || savedU);
     const actualRole = role || 'admin';
     store.setItem('hms_role', actualRole);
-    // Patients land on their own panel; admins on the dashboard.
+    // Each role lands in its own area: patient panel, doctor panel, or dashboard.
+    const _homeFor = { patient: 'patient/my-appointments.html', doctor: 'doctor/my-appointments.html', admin: 'dashboard.html' };
+    const _home = _homeFor[actualRole] || 'dashboard.html';
+    const _roleMsg = {
+      patient: 'This is a patient account — opening your patient panel.',
+      doctor: 'This is a doctor account — opening your doctor panel.',
+      admin: 'This is an administrator account — opening the dashboard.',
+    };
     let delay = 700;
     if (actualRole !== selectedRole) {
       delay = 2600;
-      showToast(actualRole === 'patient'
-        ? 'This is a patient account — opening your patient panel.'
-        : 'This is an administrator account — opening the dashboard.', 'info', 'Signed In');
+      showToast(_roleMsg[actualRole] || _roleMsg.admin, 'info', 'Signed In');
     } else {
-      showToast(actualRole === 'patient' ? 'Welcome back!' : 'Welcome back, Administrator!', 'success', 'Logged In');
+      showToast(actualRole === 'patient' ? 'Welcome back!'
+        : actualRole === 'doctor' ? 'Welcome back, Doctor!' : 'Welcome back, Administrator!', 'success', 'Logged In');
     }
-    setTimeout(() => { window.location.href = actualRole === 'patient' ? 'patient/my-appointments.html' : 'dashboard.html'; }, delay);
+    setTimeout(() => { window.location.href = _home; }, delay);
   }
 
   /* Step 1: Cognito sign-in. An unconfirmed account is sent to

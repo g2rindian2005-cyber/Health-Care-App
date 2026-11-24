@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Appointments — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>My Appointments</h1>
+          <p>Appointments assigned to you — join the video call at the appointment time</p>
+        </div>
+      </div>
+
+      <!-- No doctor record yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">No doctor record found</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a doctor record for your account yet. Ask the hospital administrator to add your doctor profile with this email address.</p>
+        </div>
+      </div>
+
+      <div id="appointmentsWrap" style="display:none;">
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-blue"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div><div class="stat-info"><div class="stat-value" id="totalAppts">—</div><div class="stat-label">Total Appointments</div></div></div>
+          <div class="stat-card stat-amber"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-info"><div class="stat-value" id="upcomingAppts">—</div><div class="stat-label">Upcoming</div></div></div>
+          <div class="stat-card stat-teal"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="stat-info"><div class="stat-value" id="confirmedAppts">—</div><div class="stat-label">Confirmed</div></div></div>
+          <div class="stat-card stat-green"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div><div class="stat-info"><div class="stat-value" id="todayAppts">—</div><div class="stat-label">Today</div></div></div>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Appointments</h3><p>Only appointments assigned to you are shown here</p></div>
+            <div class="d-flex gap-8">
+              <select class="form-control" id="statusFilter" style="width:auto;padding:7px 12px;">
+                <option value="">All Statuses</option>
+                <option>Scheduled</option><option>Confirmed</option><option>Active</option><option>Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Patient</th><th>Appointment</th>
+                  <th>Room</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="apptTable"><tr><td colspan="6"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="apptPagination"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'my-appointments', title: 'My Appointments', subtitle: 'My Practice' });
+
+  let myDid = null, myDoctorName = '', allAppts = [], apptPage = 1;
+  const perPage = 8;
+
+  /* DID is resolved exactly like the patient PID pattern:
+     cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()). */
+  async function resolveMyDoctor() {
+    const cached = sessionStorage.getItem('hms_did');
+    if (cached) {
+      myDid = parseInt(cached, 10);
+      try { myDoctorName = sessionStorage.getItem('hms_doctor_name') || ''; } catch (e) {}
+      return myDid;
+    }
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await DoctorsAPI.byEmail(email);
+    if (res && res.doctor) {
+      myDid = res.doctor.doctor_id;
+      myDoctorName = ('Dr. ' + (res.doctor.first_name || '') + ' ' + (res.doctor.last_name || '')).trim();
+      try {
+        sessionStorage.setItem('hms_did', String(myDid));
+        sessionStorage.setItem('hms_doctor_name', myDoctorName);
+      } catch (e) {}
+      return myDid;
+    }
+    return null;
+  }
+
+  async function init() {
+    await resolveMyDoctor();
+    if (!myDid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('appointmentsWrap').style.display = 'block';
+    const data = await DoctorsAPI.forDoctor(myDid);
+    allAppts = (data && data.assignments) || [];
+    allAppts.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('totalAppts').textContent = allAppts.length;
+    document.getElementById('upcomingAppts').textContent = allAppts.filter(a => a.status !== 'Completed' && new Date(a.appointment_date) >= new Date()).length;
+    document.getElementById('confirmedAppts').textContent = allAppts.filter(a => a.status === 'Confirmed').length;
+    document.getElementById('todayAppts').textContent = allAppts.filter(a => (a.appointment_date || '').toString().slice(0, 10) === today && a.status !== 'Completed').length;
+
+    renderAppts();
+  }
+
+  function getFiltered() {
+    const s = document.getElementById('statusFilter').value;
+    return allAppts.filter(a => !s || a.status === s);
+  }
+
+  function videoCallUrl(a) {
+    return '../video-call.html?assignment_id=' + a.assignment_id
+      + '&role=doctor&doctor_name=' + encodeURIComponent(myDoctorName || '')
+      + '&appointment_date=' + encodeURIComponent(a.appointment_date || '');
+  }
+
+  function renderAppts() {
+    const f = getFiltered();
+    const page = f.slice((apptPage - 1) * perPage, apptPage * perPage);
+    document.getElementById('apptTable').innerHTML = page.length
+      ? page.map(a => `
+        <tr>
+          <td class="fw-600">#${a.assignment_id}</td>
+          <td class="fw-600">${a.patient_name || '—'} <span class="text-muted">(PID ${a.patient_id})</span></td>
+          <td class="text-muted">${(a.appointment_date || '').toString().slice(0, 16)}</td>
+          <td><span class="badge badge-gray">${a.room_number || '—'}</span></td>
+          <td>${statusBadge(a.status)}</td>
+          <td>
+            ${(a.status === 'Scheduled' || a.status === 'Confirmed' || a.status === 'Active') ? `
+            <a class="btn btn-primary btn-sm" style="white-space:nowrap;" href="${videoCallUrl(a)}" title="Join video consultation — you receive the patient's call">Video Call</a>` : '<span class="text-muted">—</span>'}
+          </td>
+        </tr>`).join('')
+      : `<tr><td colspan="6"><div class="empty-state"><h4>No appointments found</h4><p>Appointments assigned to you by the administrator will appear here.</p></div></td></tr>`;
+    buildPagination(document.getElementById('apptPagination'), f.length, apptPage, perPage, p => { apptPage = p; renderAppts(); });
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', () => { apptPage = 1; renderAppts(); });
+
+  init();
+</script>
+</body>
+</html>

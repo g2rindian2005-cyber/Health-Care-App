@@ -156,6 +156,7 @@ locals {
   # (event.userPoolId) instead.
   migration_env = {
     USERS_TABLE   = "hospital-users"
+    DOCTORS_TABLE = "hospital-doctors"
     AUTH_EMAIL    = var.ses_from_email
     AUTH_PASSWORD = var.auth_admin_password
   }
@@ -546,6 +547,13 @@ resource "aws_cognito_user_group" "patients" {
   user_pool_id = aws_cognito_user_pool.hospital.id
   description  = "Registered patients — own panel and appointments only"
   precedence   = 2
+}
+
+resource "aws_cognito_user_group" "doctors" {
+  name         = "Doctors"
+  user_pool_id = aws_cognito_user_pool.hospital.id
+  description  = "Hospital doctors — own appointments and patients only"
+  precedence   = 3
 }
 
 resource "aws_cognito_user_pool_client" "hospital" {

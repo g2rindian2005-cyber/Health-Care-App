@@ -19,6 +19,9 @@ Role (used by the appointment ownership check):
     when the custom:role claim is "admin" (the migration Lambda sets
     it, so a migrated admin has the right role on the very first
     sign-in, before the post-auth trigger has added the group)
+  * "doctor" when the token's cognito:groups contains "Doctors", or
+    when the custom:role claim is "doctor" (the migration Lambda
+    sets it for an email found in hospital-doctors)
   * "patient" otherwise — including when the token carries no groups
     and no role claim. The safe default is patient, never admin.
 
@@ -113,10 +116,14 @@ def verify_token(token):
 
 
 def role_from_payload(payload):
-    """Map a verified Cognito token payload to "admin" or "patient"."""
+    """Map a verified Cognito token payload to "admin", "doctor" or "patient"."""
     groups = payload.get("cognito:groups") or []
     if "Admins" in groups:
         return "admin"
+    if "Doctors" in groups:
+        return "doctor"
     if str(payload.get("custom:role") or "").lower() == "admin":
         return "admin"
+    if str(payload.get("custom:role") or "").lower() == "doctor":
+        return "doctor"
     return "patient"
