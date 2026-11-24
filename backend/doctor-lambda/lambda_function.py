@@ -56,9 +56,10 @@ import os
 # never contained — the import silently failed and no appointment email
 # was ever sent.)
 try:
-    from send_email import send_appointment_email  # noqa: E402
+    from send_email import send_appointment_email, send_doctor_appointment_email  # noqa: E402
 except Exception:
     send_appointment_email = None
+    send_doctor_appointment_email = None
 
 
 def _body(event):
@@ -468,6 +469,19 @@ def _dispatch(event, context):
                                        d.get("appointment_date", ""))
             except Exception:
                 pass
+        # Notify the assigned doctor as well ("New Appointment
+        # Assigned"). Best-effort only: a failed email must never
+        # break the assignment response, and a doctor with no email
+        # on file is skipped silently.
+        if send_doctor_appointment_email and doc.get("email"):
+            try:
+                send_doctor_appointment_email(
+                    doc["email"], full_name(doc) or "", full_name(p) or "",
+                    p.get("patient_id"), asg_id,
+                    d.get("appointment_date", ""), d.get("status", "Assigned"),
+                    d.get("room_number"), doc.get("consultation_fee"))
+            except Exception:
+                pass
         return _json(201, {"message": "Doctor assigned", "assignment_id": asg_id})
 
     if method == "PUT" and resource.endswith("/assignments/{assignment_id}"):
@@ -487,18 +501,35 @@ def _dispatch(event, context):
                 changes[k] = int(changes[k])
         update_item(ASSIGNMENTS, aid, changes)
         # Appointment confirmed -> notify the patient by email ("Your
-        # appointment is confirmed"). Best-effort only: a failed email
-        # must never break the API response.
-        if _row and changes.get("status") == "Confirmed" and send_appointment_email:
+        # appointment is confirmed") and the assigned doctor as well
+        # ("Appointment Confirmed"). Best-effort only: a failed email
+        # must never break the API response, and each send is
+        # independent, so one failing never blocks the other.
+        if _row and changes.get("status") == "Confirmed":
             try:
                 _p = get_item(PATIENTS, int(_row.get("patient_id")))
                 _did = changes.get("doctor_id", _row.get("doctor_id"))
                 _doc = get_item(DOCTORS, int(_did)) if _did else None
                 _date = changes.get("appointment_date", _row.get("appointment_date"))
-                if _p and _p.get("email"):
-                    send_appointment_email(_p["email"], _p.get("patient_id", _row.get("patient_id")),
-                                           aid, full_name(_doc) or "",
-                                           _date or "")
+                _room = changes.get("room_number", _row.get("room_number"))
+                _pid = (_p.get("patient_id", _row.get("patient_id")) if _p
+                        else _row.get("patient_id"))
+                _doctor_name = full_name(_doc) or ""
+                if send_appointment_email and _p and _p.get("email"):
+                    try:
+                        send_appointment_email(_p["email"], _pid,
+                                               aid, _doctor_name,
+                                               _date or "")
+                    except Exception:
+                        pass
+                if send_doctor_appointment_email and _doc and _doc.get("email"):
+                    try:
+                        send_doctor_appointment_email(
+                            _doc["email"], _doctor_name, full_name(_p) or "",
+                            _pid, aid, _date or "", "Confirmed",
+                            _room, _doc.get("consultation_fee"))
+                    except Exception:
+                        pass
             except Exception:
                 pass
         return _json(200, {"message": "Assignment updated", "assignment_id": aid})

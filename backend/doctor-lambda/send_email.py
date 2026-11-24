@@ -49,3 +49,46 @@ def send_appointment_email(to_email, patient_id, assignment_id, doctor_name, app
                .replace("{{doctor_name}}", str(doctor_name))
                .replace("{{appointment_date}}", str(appointment_date)))
     return send_email(to_email, "Appointment Confirmation — Health Care Hospital", html)
+
+
+def send_doctor_appointment_email(to_email, doctor_name, patient_name, patient_id,
+                                   assignment_id, appointment_date, status,
+                                   room_number=None, consultation_fee=None):
+    """Sent to the assigned doctor when an appointment is created
+    (status "Assigned") or confirmed (status "Confirmed").
+
+    The subject follows the status: a new assignment is
+    "New Appointment Assigned", a confirmed one is
+    "Appointment Confirmed". The caller is responsible for skipping
+    the send when the doctor has no email on file, and for wrapping
+    the call so an SES failure never breaks the API response.
+    """
+    confirmed = str(status).strip().lower() == "confirmed"
+    subject = ("Appointment Confirmed — Health Care Hospital"
+               if confirmed
+               else "New Appointment Assigned — Health Care Hospital")
+    heading = ("Appointment Confirmed"
+               if confirmed
+               else "New Appointment Assigned")
+    # The doctor record's name sometimes already starts with "Dr."
+    # (the add-doctor form suggests it); strip it so the greeting
+    # never reads "Dear Dr. Dr. ...".
+    name = str(doctor_name).strip()
+    low = name.lower()
+    if low.startswith("dr."):
+        name = name[3:].strip()
+    elif low.startswith("dr "):
+        name = name[3:].strip()
+    fee = f"₹{float(consultation_fee):,.0f}" if consultation_fee else "—"
+    room = str(room_number).strip() if room_number else "Not assigned yet"
+    html = _load_template("doctor-appointment.html")
+    html = (html.replace("{{doctor_name}}", name)
+               .replace("{{heading}}", heading)
+               .replace("{{patient_name}}", str(patient_name))
+               .replace("{{patient_id}}", str(patient_id))
+               .replace("{{assignment_id}}", str(assignment_id))
+               .replace("{{appointment_date}}", str(appointment_date))
+               .replace("{{room_number}}", room)
+               .replace("{{consultation_fee}}", fee)
+               .replace("{{status}}", str(status)))
+    return send_email(to_email, subject, html)
