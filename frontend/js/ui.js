@@ -420,14 +420,16 @@ function buildTopbar(title, subtitle) {
         <path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
       </svg>
     </button>
-    <button class="topbar-btn" title="Notifications">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-      </svg>
-      <span class="dot"></span>
-    </button>
+    <div class="topbar-notif-wrap">
+      <button class="topbar-btn" id="topbarNotifBtn" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="dot"></span>
+      </button>
+    </div>
     <button class="topbar-btn" id="topbarSettingsBtn" title="Settings">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -551,6 +553,9 @@ function initApp(opts = {}) {
   /* Dark mode toggle */
   document.getElementById('themeToggleBtn')?.addEventListener('click', toggleTheme);
 
+  /* Notification bell + dropdown (live data, best-effort) */
+  _initNotifBell();
+
   /* Date */
   const dateEl = document.getElementById('topbarDate');
   if (dateEl) {
@@ -558,6 +563,253 @@ function initApp(opts = {}) {
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
     });
   }
+}
+
+/* ── Notifications (topbar bell) ──────────────────────────────
+   The bell opens a dropdown fed by LIVE API data only — no mock or
+   hardcoded items. Patient: upcoming Confirmed/Scheduled appointments
+   + Pending bills. Admin: pending dues + pending lab orders +
+   low-stock medicines. Opening the dropdown marks everything read
+   (localStorage 'hms_notif_read_at'); the red dot only shows while
+   unread items exist. Every fetch is best-effort: a failed fetch shows
+   a short line in the dropdown and never breaks the page.
+   NOTE on item dates: the enriched GET /assignments/patient/{pid}
+   rows carry no created_at, so an appointment's item date IS its
+   appointment_date — the dot returns on the next page load while an
+   appointment is still upcoming, and hides once it passes or is no
+   longer Confirmed/Scheduled. Bills/dues/orders use their creation
+   dates, so marking them read sticks until a new one appears.
+   Low-stock items have no date (they are a live condition), so they
+   count as new while the stock is low. */
+const NOTIF_READ_KEY = 'hms_notif_read_at';
+const NOTIF_MAX_ITEMS = 6;
+
+function _notifReadAt() {
+  try {
+    const v = parseInt(localStorage.getItem(NOTIF_READ_KEY) || '0', 10);
+    return isNaN(v) ? 0 : v;
+  } catch (e) { return 0; }
+}
+function _notifMarkRead() {
+  try { localStorage.setItem(NOTIF_READ_KEY, String(Date.now())); } catch (e) {}
+}
+function _notifEscape(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function _notifFmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function _notifFmtDateTime(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ', ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+function _notifTs(d) {
+  const t = new Date(d).getTime();
+  return isNaN(t) ? 0 : t;
+}
+function _notifRole() {
+  return localStorage.getItem('hms_role') || sessionStorage.getItem('hms_role') || 'patient';
+}
+
+/* Patient items: upcoming Confirmed/Scheduled appointments + Pending
+   bills. PID is resolved exactly like patient/my-appointments.html:
+   cached sessionStorage 'hms_pid', else PatientsAPI.byEmail(getMyEmail()). */
+async function _notifPatientItems() {
+  if (typeof PatientsAPI === 'undefined' || typeof DoctorsAPI === 'undefined' || typeof BillingAPI === 'undefined')
+    return { items: [], failed: true };
+  let pid = null;
+  try { const c = sessionStorage.getItem('hms_pid'); if (c) pid = parseInt(c, 10); } catch (e) {}
+  if (!pid) {
+    const email = (typeof getMyEmail === 'function') ? getMyEmail() : '';
+    if (!email) return { items: [], failed: false };
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      pid = res.patient.patient_id;
+      try { sessionStorage.setItem('hms_pid', String(pid)); } catch (e) {}
+    }
+  }
+  if (!pid) return { items: [], failed: false }; /* no patient profile yet */
+  const [aRes, bRes] = await Promise.all([DoctorsAPI.forPatient(pid), BillingAPI.billsFor(pid)]);
+  if (!aRes && !bRes) return { items: [], failed: true };
+  const items = [];
+  ((aRes && aRes.assignments) || [])
+    .filter(a => a.status === 'Confirmed' || a.status === 'Scheduled')
+    .forEach(a => {
+      const when = _notifFmtDateTime(a.appointment_date);
+      items.push({
+        color: a.status === 'Confirmed' ? 'var(--green-500)' : 'var(--blue-500)',
+        text: `Appointment #${a.assignment_id} with ${a.doctor_name || 'Doctor'}${when ? ' — ' + when : ''}`,
+        time: a.room_number ? `${a.status} · Room ${a.room_number}` : (a.status || ''),
+        ts: _notifTs(a.appointment_date),
+        href: resolveRoot('patient/my-appointments.html'),
+      });
+    });
+  ((bRes && bRes.bills) || [])
+    .filter(b => b.status === 'Pending')
+    .forEach(b => {
+      const amt = b.net_amount != null ? b.net_amount : b.amount;
+      items.push({
+        color: 'var(--amber-500)',
+        text: `Bill #${b.bill_id} — ₹${Number(amt || 0).toLocaleString('en-IN')} pending`,
+        time: _notifFmtDate(b.bill_date),
+        ts: _notifTs(b.bill_date),
+        href: resolveRoot('patient/my-appointments.html'),
+      });
+    });
+  return { items, failed: false };
+}
+
+/* Admin items: pending dues + pending lab orders + low-stock medicines.
+   Only endpoints that exist in js/api.js are used. */
+async function _notifAdminItems() {
+  if (typeof BillingAPI === 'undefined' || typeof LabAPI === 'undefined' || typeof PharmacyAPI === 'undefined')
+    return { items: [], failed: true };
+  const [duesRes, labRes, stockRes] = await Promise.all([
+    BillingAPI.dues(), LabAPI.pending(), PharmacyAPI.lowStock(),
+  ]);
+  if (!duesRes && !labRes && !stockRes) return { items: [], failed: true };
+  const items = [];
+  ((duesRes && duesRes.dues) || []).forEach(d => {
+    const amt = d.due_amount != null ? d.due_amount : d.net_amount;
+    items.push({
+      color: 'var(--red-500)',
+      text: `₹${Number(amt || 0).toLocaleString('en-IN')} due — ${d.patient_name || 'Patient'} (Bill #${d.bill_id})`,
+      time: _notifFmtDate(d.bill_date),
+      ts: _notifTs(d.bill_date),
+      href: resolveRoot('billing/pending-dues.html'),
+    });
+  });
+  ((labRes && labRes.orders) || []).forEach(o => {
+    items.push({
+      color: 'var(--purple-500)',
+      text: `Lab order #${o.order_id} — ${o.test_name || 'Test'} (${o.patient_name || 'Patient'})`,
+      time: _notifFmtDate(o.order_date),
+      ts: _notifTs(o.order_date),
+      href: resolveRoot('laboratory/lab-orders.html'),
+    });
+  });
+  ((stockRes && stockRes.medicines) || []).forEach(m => {
+    items.push({
+      color: 'var(--amber-500)',
+      text: `Low stock — ${m.medicine_name} (${m.stock_quantity} left)`,
+      time: (m.reorder_level != null) ? `Reorder level: ${m.reorder_level}` : '',
+      ts: Date.now(),
+      href: resolveRoot('pharmacy/medicine-catalog.html'),
+    });
+  });
+  return { items, failed: false };
+}
+
+async function _notifFetchItems() {
+  try {
+    return _notifRole() === 'patient' ? await _notifPatientItems() : await _notifAdminItems();
+  } catch (e) {
+    return { items: [], failed: true };
+  }
+}
+
+function _notifRenderList(dd, result) {
+  const list = dd.querySelector('.notif-list');
+  if (!list) return;
+  if (result.failed) {
+    list.innerHTML = `<div class="notif-empty">Couldn't load notifications</div>`;
+    return;
+  }
+  const items = (result.items || []).slice()
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, NOTIF_MAX_ITEMS);
+  if (!items.length) {
+    list.innerHTML = `<div class="notif-empty">No new notifications</div>`;
+    return;
+  }
+  list.innerHTML = items.map(it => `
+    <a class="notification-item" href="${_notifEscape(it.href)}">
+      <div class="notif-dot-wrap"><div class="notif-dot" style="background:${it.color}"></div></div>
+      <div class="notif-body">
+        <div class="notif-text">${_notifEscape(it.text)}</div>
+        ${it.time ? `<div class="notif-time">${_notifEscape(it.time)}</div>` : ''}
+      </div>
+    </a>`).join('');
+}
+
+function _notifSetDot(show) {
+  const btn = document.getElementById('topbarNotifBtn');
+  const dot = btn && btn.querySelector('.dot');
+  if (dot) dot.style.display = show ? '' : 'none';
+}
+function _notifSetBellExpanded(open) {
+  const btn = document.getElementById('topbarNotifBtn');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function _notifClose() {
+  const dd = document.getElementById('notifDropdown');
+  if (dd) dd.hidden = true;
+  _notifSetBellExpanded(false);
+}
+async function _notifToggle() {
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  if (!dd.hidden) { _notifClose(); return; }
+  dd.hidden = false;
+  _notifSetBellExpanded(true);
+  const list = dd.querySelector('.notif-list');
+  if (list) list.innerHTML = `<div class="notif-empty">Loading…</div>`;
+  const result = await _notifFetchItems();
+  if (dd.hidden) return; /* closed while loading — don't reopen it */
+  _notifRenderList(dd, result);
+  if (!result.failed) { _notifMarkRead(); _notifSetDot(false); }
+}
+
+/* Background dot state — never blocks the page. A failed fetch leaves
+   the dot as-is (visible by default, so the user can still open it). */
+function _notifRefreshDot() {
+  return _notifFetchItems().then(result => {
+    if (result.failed) return;
+    const items = result.items || [];
+    const readAt = _notifReadAt();
+    const unread = items.length > 0 && (readAt <= 0 || items.some(it => it.ts > readAt));
+    _notifSetDot(unread);
+  }).catch(() => {});
+}
+
+function _initNotifBell() {
+  const btn = document.getElementById('topbarNotifBtn');
+  if (!btn) return;
+  /* Inject the dropdown panel once, anchored under the bell. */
+  let dd = document.getElementById('notifDropdown');
+  if (!dd) {
+    dd = document.createElement('div');
+    dd.id = 'notifDropdown';
+    dd.className = 'notif-dropdown';
+    dd.hidden = true;
+    dd.innerHTML = `<div class="notif-dropdown-header">Notifications</div><div class="notif-list"></div>`;
+    const wrap = btn.closest('.topbar-notif-wrap') || btn.parentElement;
+    (wrap || document.body).appendChild(dd);
+  }
+  btn.addEventListener('click', (e) => { e.stopPropagation(); _notifToggle(); });
+  /* Close when clicking anywhere outside the panel (or pressing Escape).
+     Attached once — initApp may run again after a topbar re-render. */
+  if (!window._notifDocWired) {
+    window._notifDocWired = true;
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('notifDropdown');
+      if (!panel || panel.hidden) return;
+      if (e.target.closest('#notifDropdown') || e.target.closest('#topbarNotifBtn')) return;
+      _notifClose();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') _notifClose();
+    });
+  }
+  _notifRefreshDot();
 }
 
 /* ── Resolve root path (works from sub-dirs) ──────────────── */
