@@ -13,6 +13,7 @@ Routes:
     GET    /lab/orders/{id}              -> get one order
     PUT    /lab/orders/{id}              -> update an order (status / result)
     DELETE /lab/orders/{id}              -> delete an order
+    POST   /lab/orders/{id}/send-report  -> email the lab report to the patient
     GET    /lab/orders/patient/{pid}     -> lab history for a patient
     GET    /lab/pending                  -> orders not yet completed
 
@@ -28,6 +29,14 @@ from dynamodb import (
     fetch_by_ids, full_name, next_id, now,
     PATIENTS, DOCTORS, LAB_TESTS, LAB_ORDERS,
 )
+
+# Email helper (send_email.py + smtp_config.py + templates/) is
+# packaged inside this Lambda's own directory, so a plain import
+# works at runtime — same pattern as the doctor Lambda.
+try:
+    from send_email import send_lab_report_email  # noqa: E402
+except Exception:
+    send_lab_report_email = None
 
 
 def _body(event):
@@ -96,6 +105,9 @@ def _dispatch(event, context):
     if len(_seg) == 4 and _seg[:3] == ["lab", "orders", "patient"]:
         _ppx["patient_id"] = _seg[3]
         resource = "/lab/orders/patient/{patient_id}"
+    elif len(_seg) == 4 and _seg[:2] == ["lab", "orders"] and _seg[3] == "send-report":
+        _ppx["order_id"] = _seg[2]
+        resource = "/lab/orders/{order_id}/send-report"
     elif _seg == ["lab", "tests"]:
         resource = "/lab/tests"
     elif len(_seg) == 3 and _seg[:2] == ["lab", "tests"]:
@@ -249,5 +261,43 @@ def _dispatch(event, context):
         oid = int(_pp(event, "order_id"))
         delete_item(LAB_ORDERS, oid)
         return _json(200, {"message": "Lab order deleted", "order_id": oid})
+
+    # ---- SEND LAB REPORT BY EMAIL ----
+    # The patient asked for their lab report by email. The email goes
+    # to the address on the patient record — never to a blank address.
+    # The row is marked sent only after SES accepts the email, so a
+    # failed send never shows as sent.
+    if method == "POST" and resource.endswith("/lab/orders/{order_id}/send-report"):
+        oid = int(_pp(event, "order_id"))
+        order = get_item(LAB_ORDERS, oid)
+        if not order:
+            return _json(404, {"error": "Lab order not found"})
+        patient = get_item(PATIENTS, int(order.get("patient_id")))
+        email = (patient.get("email") if patient else "") or ""
+        email = email.strip()
+        if not email:
+            return _json(400, {"error": "The patient has no email address on file — add an email to the patient record first"})
+        if not send_lab_report_email:
+            return _json(500, {"error": "Email service is not configured"})
+        enriched = _enrich_orders([order])[0]
+        try:
+            send_lab_report_email(
+                email,
+                full_name(patient) or "",
+                oid,
+                enriched.get("test_name") or "",
+                enriched.get("order_date") or "",
+                enriched.get("status") or "",
+                enriched.get("result_value") or "",
+                enriched.get("normal_range") or "",
+                enriched.get("test_unit") or "",
+                enriched.get("doctor_name") or "",
+            )
+        except Exception as exc:
+            return _json(502, {"error": f"Could not send the report email: {exc}"})
+        sent_at = now()
+        update_item(LAB_ORDERS, oid, {"report_sent_at": sent_at, "report_sent_to": email})
+        return _json(200, {"message": "Lab report sent", "order_id": oid,
+                            "email": email, "report_sent_at": sent_at})
 
     return _json(404, {"error": "Route not found", "resource": resource})

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Reports — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>My Reports</h1>
+          <p>Your lab reports and prescriptions — send any report to your email</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="my-appointments.html" class="btn btn-primary btn-sm">My Appointments</a>
+        </div>
+      </div>
+
+      <!-- No profile yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Complete your profile first</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then your lab reports and prescriptions will appear here.</p>
+          <a href="my-profile.html" class="btn btn-primary">Complete My Profile</a>
+        </div>
+      </div>
+
+      <div id="reportsWrap" style="display:none;">
+        <!-- Where reports are sent -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-body" style="padding:16px 22px;">
+            <p id="emailNote" style="margin:0; font-size:13.5px; color:rgba(219,234,254,.85);">Reports will be sent to the email on your patient record.</p>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-blue"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="stat-info"><div class="stat-value" id="totalLab">—</div><div class="stat-label">Lab Reports</div></div></div>
+          <div class="stat-card stat-teal"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></div><div class="stat-info"><div class="stat-value" id="totalRx">—</div><div class="stat-label">Prescriptions</div></div></div>
+          <div class="stat-card stat-purple"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div><div class="stat-info"><div class="stat-value" id="totalSent">—</div><div class="stat-label">Reports Sent</div></div></div>
+        </div>
+
+        <!-- Lab reports table -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Lab Reports</h3><p>Test results ordered for you</p></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Test</th><th>Date</th><th>Doctor</th><th>Status</th><th>Result</th><th>Sent</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="labTable"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Prescriptions table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Prescriptions</h3><p>Medicines prescribed for you</p></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Medicine</th><th>Dosage</th><th>Date</th><th>Doctor</th><th>Status</th><th>Sent</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="rxTable"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'my-reports', title: 'My Reports', subtitle: 'My Care' });
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  let myPid = null;
+  let myEmail = '';
+  let labOrders = [];
+  let prescriptions = [];
+
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) {
+      const pid = parseInt(cached, 10);
+      try {
+        const p = await PatientsAPI.get(pid);
+        if (p && p.patient) myEmail = p.patient.email || '';
+      } catch (e) { /* email note falls back to the generic line */ }
+      return pid;
+    }
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      myEmail = res.patient.email || '';
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  function sentCell(item) {
+    if (item.report_sent_at) {
+      return '<span class="badge badge-success">Sent</span> <span class="text-muted">' + esc(String(item.report_sent_at).slice(0, 16)) + '</span>';
+    }
+    return '<span class="text-muted">Not sent</span>';
+  }
+
+  function renderTables() {
+    document.getElementById('totalLab').textContent = labOrders.length;
+    document.getElementById('totalRx').textContent = prescriptions.length;
+    const sentCount = labOrders.filter(function (o) { return o.report_sent_at; }).length +
+                      prescriptions.filter(function (r) { return r.report_sent_at; }).length;
+    document.getElementById('totalSent').textContent = sentCount;
+
+    document.getElementById('labTable').innerHTML = labOrders.length
+      ? labOrders.map(function (o) {
+          return '<tr>' +
+            '<td class="fw-600">' + esc(o.test_name || ('Test #' + o.test_id)) + '</td>' +
+            '<td>' + esc(String(o.order_date || '').slice(0, 16)) + '</td>' +
+            '<td>' + esc(o.doctor_name || '—') + '</td>' +
+            '<td>' + statusBadge(o.status || 'Ordered') + '</td>' +
+            '<td>' + esc(o.result_value || 'Pending') + '</td>' +
+            '<td>' + sentCell(o) + '</td>' +
+            '<td><button class="btn btn-outline btn-sm" data-send-lab="' + o.order_id + '">Send via Email</button></td>' +
+            '</tr>';
+        }).join('')
+      : '<tr><td colspan="7"><div class="empty-state"><h4>No lab reports yet</h4><p>Lab tests ordered for you will appear here. Ask your doctor to order a test, or check back after your next visit.</p></div></td></tr>';
+
+    document.getElementById('rxTable').innerHTML = prescriptions.length
+      ? prescriptions.map(function (r) {
+          return '<tr>' +
+            '<td class="fw-600">' + esc(r.medicine_name || ('Medicine #' + r.medicine_id)) + '</td>' +
+            '<td>' + esc(r.dosage || '—') + '</td>' +
+            '<td>' + esc(String(r.prescribed_date || '').slice(0, 16)) + '</td>' +
+            '<td>' + esc(r.doctor_name || '—') + '</td>' +
+            '<td>' + statusBadge(r.status || 'Pending') + '</td>' +
+            '<td>' + sentCell(r) + '</td>' +
+            '<td><button class="btn btn-outline btn-sm" data-send-rx="' + r.prescription_id + '">Send via Email</button></td>' +
+            '</tr>';
+        }).join('')
+      : '<tr><td colspan="7"><div class="empty-state"><h4>No prescriptions yet</h4><p>Medicines prescribed for you will appear here. Ask your doctor for a prescription, or check back after your next visit.</p></div></td></tr>';
+  }
+
+  async function sendLabReport(orderId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    const res = await LabAPI.sendReport(orderId);
+    if (res && res.report_sent_at) {
+      const item = labOrders.find(function (o) { return o.order_id === orderId; });
+      if (item) { item.report_sent_at = res.report_sent_at; item.report_sent_to = res.email; }
+      showToast('Lab report sent to ' + (res.email || myEmail), 'success');
+    }
+    /* On failure request() already showed the error toast; re-render
+       restores the button either way. */
+    renderTables();
+  }
+
+  async function sendPrescription(prescriptionId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    const res = await PharmacyAPI.sendPrescription(prescriptionId);
+    if (res && res.report_sent_at) {
+      const item = prescriptions.find(function (r) { return r.prescription_id === prescriptionId; });
+      if (item) { item.report_sent_at = res.report_sent_at; item.report_sent_to = res.email; }
+      showToast('Prescription sent to ' + (res.email || myEmail), 'success');
+    }
+    renderTables();
+  }
+
+  document.addEventListener('click', function (e) {
+    const labBtn = e.target.closest('[data-send-lab]');
+    if (labBtn && !labBtn.disabled) {
+      sendLabReport(parseInt(labBtn.getAttribute('data-send-lab'), 10), labBtn);
+      return;
+    }
+    const rxBtn = e.target.closest('[data-send-rx]');
+    if (rxBtn && !rxBtn.disabled) {
+      sendPrescription(parseInt(rxBtn.getAttribute('data-send-rx'), 10), rxBtn);
+    }
+  });
+
+  async function init() {
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    if (myEmail) {
+      document.getElementById('emailNote').textContent =
+        'Reports will be sent to your registered email: ' + myEmail;
+    }
+    document.getElementById('reportsWrap').style.display = 'block';
+
+    const labData = await LabAPI.ordersForPatient(myPid);
+    labOrders = (labData && labData.orders) || [];
+    const rxData = await PharmacyAPI.prescriptionsForPatient(myPid);
+    prescriptions = (rxData && rxData.prescriptions) || [];
+    renderTables();
+  }
+
+  init();
+</script>
+</body>
+</html>

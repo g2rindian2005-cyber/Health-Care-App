@@ -13,6 +13,7 @@ Routes:
     GET    /pharmacy/prescriptions/{id}           -> get one prescription
     PUT    /pharmacy/prescriptions/{id}           -> update (dispensing cuts stock)
     DELETE /pharmacy/prescriptions/{id}           -> delete a prescription
+    POST   /pharmacy/prescriptions/{id}/send-report -> email the prescription to the patient
     GET    /pharmacy/prescriptions/patient/{pid}  -> prescriptions for a patient
     GET    /pharmacy/low-stock                    -> medicines at/below reorder level
 
@@ -34,6 +35,14 @@ from dynamodb import (
     update_item_conditional, fetch_by_ids, full_name, next_id, now,
     PATIENTS, DOCTORS, MEDICINES, PRESCRIPTIONS,
 )
+
+# Email helper (send_email.py + smtp_config.py + templates/) is
+# packaged inside this Lambda's own directory, so a plain import
+# works at runtime — same pattern as the doctor Lambda.
+try:
+    from send_email import send_prescription_email  # noqa: E402
+except Exception:
+    send_prescription_email = None
 
 
 def _body(event):
@@ -103,6 +112,9 @@ def _dispatch(event, context):
     if len(_seg) == 4 and _seg[:3] == ["pharmacy", "prescriptions", "patient"]:
         _ppx["patient_id"] = _seg[3]
         resource = "/pharmacy/prescriptions/patient/{patient_id}"
+    elif len(_seg) == 4 and _seg[:2] == ["pharmacy", "prescriptions"] and _seg[3] == "send-report":
+        _ppx["prescription_id"] = _seg[2]
+        resource = "/pharmacy/prescriptions/{prescription_id}/send-report"
     elif _seg == ["pharmacy", "medicines"]:
         resource = "/pharmacy/medicines"
     elif len(_seg) == 3 and _seg[:2] == ["pharmacy", "medicines"]:
@@ -287,5 +299,45 @@ def _dispatch(event, context):
         rid = int(_pp(event, "prescription_id"))
         delete_item(PRESCRIPTIONS, rid)
         return _json(200, {"message": "Prescription deleted", "prescription_id": rid})
+
+    # ---- SEND PRESCRIPTION BY EMAIL ----
+    # The patient asked for their prescription by email. The email
+    # goes to the address on the patient record — never to a blank
+    # address. The row is marked sent only after SES accepts the
+    # email, so a failed send never shows as sent.
+    if method == "POST" and resource.endswith("/pharmacy/prescriptions/{prescription_id}/send-report"):
+        rid = int(_pp(event, "prescription_id"))
+        rx = get_item(PRESCRIPTIONS, rid)
+        if not rx:
+            return _json(404, {"error": "Prescription not found"})
+        patient = get_item(PATIENTS, int(rx.get("patient_id")))
+        email = (patient.get("email") if patient else "") or ""
+        email = email.strip()
+        if not email:
+            return _json(400, {"error": "The patient has no email address on file — add an email to the patient record first"})
+        if not send_prescription_email:
+            return _json(500, {"error": "Email service is not configured"})
+        enriched = _enrich_rx([rx])[0]
+        try:
+            send_prescription_email(
+                email,
+                full_name(patient) or "",
+                rid,
+                enriched.get("medicine_name") or "",
+                enriched.get("dosage") or "",
+                enriched.get("frequency") or "",
+                enriched.get("duration_days"),
+                enriched.get("quantity") or 0,
+                enriched.get("status") or "",
+                enriched.get("prescribed_date") or "",
+                enriched.get("doctor_name") or "",
+                enriched.get("total_amount"),
+            )
+        except Exception as exc:
+            return _json(502, {"error": f"Could not send the prescription email: {exc}"})
+        sent_at = now()
+        update_item(PRESCRIPTIONS, rid, {"report_sent_at": sent_at, "report_sent_to": email})
+        return _json(200, {"message": "Prescription sent", "prescription_id": rid,
+                            "email": email, "report_sent_at": sent_at})
 
     return _json(404, {"error": "Route not found", "resource": resource})

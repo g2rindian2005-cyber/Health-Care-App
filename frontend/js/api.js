@@ -193,6 +193,7 @@ const LabAPI = {
   updateOrder:(id, b)   => request(`/lab/orders/${id}`,   { method: "PUT",    body: JSON.stringify(b) }),
   removeOrder:(id)      => request(`/lab/orders/${id}`,   { method: "DELETE" }),
   ordersForPatient: (pid) => request(`/lab/orders/patient/${pid}`),
+  sendReport: (id)   => request(`/lab/orders/${id}/send-report`, { method: "POST" }),
   pending:    ()        => request("/lab/pending"),
 };
 
@@ -210,6 +211,7 @@ const PharmacyAPI = {
   updatePrescription:(id, b)=> request(`/pharmacy/prescriptions/${id}`,  { method: "PUT",    body: JSON.stringify(b) }),
   removePrescription:(id)   => request(`/pharmacy/prescriptions/${id}`,  { method: "DELETE" }),
   prescriptionsForPatient: (pid) => request(`/pharmacy/prescriptions/patient/${pid}`),
+  sendPrescription: (id) => request(`/pharmacy/prescriptions/${id}/send-report`, { method: "POST" }),
   lowStock:       ()        => request("/pharmacy/low-stock"),
 };
 
