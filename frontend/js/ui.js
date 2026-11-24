@@ -888,6 +888,7 @@ async function _notifDoctorItems() {
           badge: 'Waiting',
           badgeKind: 'waiting',
           isNew: true,
+          assignmentId: a.assignment_id,
           text: `Patient ${a.patient_name || 'Patient'} is waiting for the video call — Appointment #${a.assignment_id}`,
           time: `Waiting since ${_notifFmtDateTime(a.patient_waiting_at)} · Join now`,
           ts: waitingTs,
@@ -1041,7 +1042,69 @@ function _notifRefreshDot() {
       ? result.unread
       : (items.length > 0 && (readAt <= 0 || items.some(it => it.ts > readAt)));
     _notifSetDot(unread);
+    _notifShowIncomingCall(result);
   }).catch(() => {});
+}
+
+/* Doctor "incoming call" popup: a waiting patient is easy to miss
+   as a small red dot on the bell. When the load-time check or the
+   30-second poll finds a patient waiting for the video call, show a
+   prominent modal — "Incoming Video Call" with the patient, the
+   appointment and a Join button — so the doctor cannot miss that a
+   call is coming. Shown once per waiting appointment per browser
+   session (a dismissed call does not pop up again); a different
+   waiting patient pops up again. Never shows while the doctor is
+   already on the video-call page. */
+const NOTIF_INCOMING_KEY = 'hms_incoming_shown';
+
+function _notifIncomingShown() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(NOTIF_INCOMING_KEY) || '[]');
+    return new Set(Array.isArray(v) ? v.map(Number).filter(n => !isNaN(n)) : []);
+  } catch (e) { return new Set(); }
+}
+function _notifMarkIncomingShown(id) {
+  try {
+    const s = _notifIncomingShown();
+    s.add(Number(id));
+    sessionStorage.setItem(NOTIF_INCOMING_KEY, JSON.stringify(Array.from(s).slice(-20)));
+  } catch (e) {}
+}
+function _notifHideIncomingCall() {
+  const m = document.getElementById('incomingCallModal');
+  if (m) m.hidden = true;
+}
+function _notifShowIncomingCall(result) {
+  if (_notifRole() !== 'doctor') return;
+  if (typeof location !== 'undefined' && String(location.pathname || '').indexOf('video-call') !== -1) return;
+  const items = (result && result.items) || [];
+  /* First waiting patient not shown yet — if several patients wait
+     at once, a dismissed one must not hide the next one. */
+  const shown = _notifIncomingShown();
+  const waiting = items.find(it => it.badgeKind === 'waiting' && it.assignmentId && !shown.has(Number(it.assignmentId)));
+  if (!waiting) return;
+  _notifMarkIncomingShown(waiting.assignmentId);
+  let modal = document.getElementById('incomingCallModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'incomingCallModal';
+    modal.className = 'incoming-call-modal';
+    modal.hidden = true;
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div class="incoming-call-card">
+      <div class="incoming-call-title">Incoming Video Call</div>
+      <div class="incoming-call-text">${_notifEscape(waiting.text)}</div>
+      ${waiting.time ? `<div class="incoming-call-time">${_notifEscape(waiting.time)}</div>` : ''}
+      <div class="incoming-call-actions">
+        <a class="btn btn-primary" href="${_notifEscape(waiting.href)}">Join Video Call</a>
+        <button type="button" class="btn" id="incomingCallDismiss">Dismiss</button>
+      </div>
+    </div>`;
+  const dismiss = modal.querySelector('#incomingCallDismiss');
+  if (dismiss) dismiss.addEventListener('click', _notifHideIncomingCall);
+  modal.hidden = false;
 }
 
 function _initNotifBell() {
