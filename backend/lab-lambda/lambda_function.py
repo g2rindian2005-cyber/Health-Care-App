@@ -85,6 +85,47 @@ def _enrich_orders(rows):
     return rows
 
 
+def _auto_send_lab_report(oid):
+    """Email a completed lab report to the patient automatically, once.
+
+    Called when an order becomes Completed (the report is generated).
+    Best-effort by design: it never raises and never fails the update
+    that triggered it. Returns True only when SES accepted the email
+    and the row was marked sent. Skips silently when there is no
+    patient email, the email helper is missing, or the report was
+    already sent (so a later edit of a Completed order never
+    re-sends it). The admin can always re-send from the Lab Orders
+    page (POST /lab/orders/{id}/send-report)."""
+    try:
+        order = get_item(LAB_ORDERS, oid)
+        if not order or order.get("report_sent_at"):
+            return False
+        if not send_lab_report_email:
+            return False
+        patient = get_item(PATIENTS, int(order.get("patient_id")))
+        email = (patient.get("email") if patient else "") or ""
+        email = email.strip()
+        if not email:
+            return False
+        enriched = _enrich_orders([order])[0]
+        send_lab_report_email(
+            email,
+            full_name(patient) or "",
+            oid,
+            enriched.get("test_name") or "",
+            enriched.get("order_date") or "",
+            enriched.get("status") or "",
+            enriched.get("result_value") or "",
+            enriched.get("normal_range") or "",
+            enriched.get("test_unit") or "",
+            enriched.get("doctor_name") or "",
+        )
+        update_item(LAB_ORDERS, oid, {"report_sent_at": now(), "report_sent_to": email})
+        return True
+    except Exception:
+        return False
+
+
 def lambda_handler(event, context):
     try:
         return _dispatch(event, context)
@@ -243,7 +284,13 @@ def _dispatch(event, context):
             "created_at": now(),
             "updated_at": now(),
         })
-        return _json(201, {"message": "Lab test ordered", "order_id": new_id})
+        # Created already Completed (report generated at once) — email
+        # it to the patient automatically (best-effort).
+        emailed = False
+        if d.get("status") == "Completed":
+            emailed = _auto_send_lab_report(new_id)
+        return _json(201, {"message": "Lab test ordered", "order_id": new_id,
+                            "report_emailed": emailed})
 
     # ---- UPDATE ORDER (status / result) ----
     if method == "PUT" and resource.endswith("/lab/orders/{order_id}"):
@@ -253,8 +300,18 @@ def _dispatch(event, context):
         changes = {f: d[f] for f in fields if f in d}
         if not changes:
             return _json(400, {"error": "No fields to update"})
+        current = get_item(LAB_ORDERS, oid)
+        if not current:
+            return _json(404, {"error": "Lab order not found"})
         update_item(LAB_ORDERS, oid, changes)
-        return _json(200, {"message": "Lab order updated", "order_id": oid})
+        # Report generated: the order just became Completed — email it
+        # to the patient automatically (best-effort, never fails the
+        # update). Editing an already-Completed order does not re-send.
+        emailed = False
+        if changes.get("status") == "Completed" and current.get("status") != "Completed":
+            emailed = _auto_send_lab_report(oid)
+        return _json(200, {"message": "Lab order updated", "order_id": oid,
+                            "report_emailed": emailed})
 
     # ---- DELETE ORDER ----
     if method == "DELETE" and resource.endswith("/lab/orders/{order_id}"):

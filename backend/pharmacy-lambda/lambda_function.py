@@ -92,6 +92,49 @@ def _enrich_rx(rows):
     return rows
 
 
+def _auto_send_prescription(rid):
+    """Email a dispensed prescription to the patient automatically, once.
+
+    Called when a prescription becomes Dispensed (the prescription is
+    ready). Best-effort by design: it never raises and never fails the
+    update that triggered it. Returns True only when SES accepted the
+    email and the row was marked sent. Skips silently when there is no
+    patient email, the email helper is missing, or the prescription
+    was already sent (so a later edit of a Dispensed prescription
+    never re-sends it). The admin can always re-send from the
+    Prescriptions page (POST /pharmacy/prescriptions/{id}/send-report)."""
+    try:
+        rx = get_item(PRESCRIPTIONS, rid)
+        if not rx or rx.get("report_sent_at"):
+            return False
+        if not send_prescription_email:
+            return False
+        patient = get_item(PATIENTS, int(rx.get("patient_id")))
+        email = (patient.get("email") if patient else "") or ""
+        email = email.strip()
+        if not email:
+            return False
+        enriched = _enrich_rx([rx])[0]
+        send_prescription_email(
+            email,
+            full_name(patient) or "",
+            rid,
+            enriched.get("medicine_name") or "",
+            enriched.get("dosage") or "",
+            enriched.get("frequency") or "",
+            enriched.get("duration_days"),
+            enriched.get("quantity") or 0,
+            enriched.get("status") or "",
+            enriched.get("prescribed_date") or "",
+            enriched.get("doctor_name") or "",
+            enriched.get("total_amount"),
+        )
+        update_item(PRESCRIPTIONS, rid, {"report_sent_at": now(), "report_sent_to": email})
+        return True
+    except Exception:
+        return False
+
+
 def lambda_handler(event, context):
     try:
         return _dispatch(event, context)
@@ -260,7 +303,13 @@ def _dispatch(event, context):
             "created_at": now(),
             "updated_at": now(),
         })
-        return _json(201, {"message": "Prescription created", "prescription_id": new_id})
+        # Created already Dispensed (prescription ready at once) —
+        # email it to the patient automatically (best-effort).
+        emailed = False
+        if d.get("status") == "Dispensed":
+            emailed = _auto_send_prescription(new_id)
+        return _json(201, {"message": "Prescription created", "prescription_id": new_id,
+                            "report_emailed": emailed})
 
     # ---- UPDATE PRESCRIPTION (dispensing cuts stock once) ----
     if method == "PUT" and resource.endswith("/pharmacy/prescriptions/{prescription_id}"):
@@ -292,7 +341,15 @@ def _dispatch(event, context):
         if "duration_days" in changes and changes["duration_days"] is not None:
             changes["duration_days"] = int(changes["duration_days"])
         update_item(PRESCRIPTIONS, rid, changes)
-        return _json(200, {"message": "Prescription updated", "prescription_id": rid})
+        # Prescription ready: it just became Dispensed — email it to
+        # the patient automatically (best-effort, never fails the
+        # update). Editing an already-Dispensed prescription does not
+        # re-send.
+        emailed = False
+        if changes.get("status") == "Dispensed" and current.get("status") != "Dispensed":
+            emailed = _auto_send_prescription(rid)
+        return _json(200, {"message": "Prescription updated", "prescription_id": rid,
+                            "report_emailed": emailed})
 
     # ---- DELETE PRESCRIPTION ----
     if method == "DELETE" and resource.endswith("/pharmacy/prescriptions/{prescription_id}"):

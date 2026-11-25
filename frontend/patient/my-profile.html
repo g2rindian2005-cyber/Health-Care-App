@@ -112,9 +112,9 @@
 
         <div class="pf-grid">
           <div class="pf-card">
-            <div class="pf-card-head">
-              <h3>Patient Details</h3>
-              <p>Linked to your login email</p>
+            <div class="pf-card-head" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div><h3>Patient Details</h3><p>Linked to your login email</p></div>
+              <button type="button" class="btn-blue" style="padding:9px 16px; font-size:13px; white-space:nowrap;" onclick="editProfile()">Edit Profile</button>
             </div>
             <div class="pf-card-body">
               <div class="pf-fields">
@@ -124,22 +124,65 @@
                 <div class="pf-field"><span class="k">Date of Birth</span><span class="v" id="viewDob">—</span></div>
                 <div class="pf-field"><span class="k">Gender</span><span class="v" id="viewGender">—</span></div>
                 <div class="pf-field"><span class="k">Blood Group</span><span class="v" id="viewBlood">—</span></div>
+                <div class="pf-field"><span class="k">Address</span><span class="v" id="viewAddress">—</span></div>
+                <div class="pf-field"><span class="k">Emergency Contact</span><span class="v" id="viewEmergency">—</span></div>
+                <div class="pf-field"><span class="k">Insurance Number</span><span class="v" id="viewInsurance">—</span></div>
                 <div class="pf-field"><span class="k">Registered On</span><span class="v" id="viewReg">—</span></div>
               </div>
 
               <div class="pf-sec" id="editSection">
-                <div class="pf-sec-title">Edit Contact Details</div>
+                <div class="pf-sec-title">Edit Profile</div>
                 <div class="pf-2col">
+                  <div class="pf-input-field">
+                    <label>First Name *</label>
+                    <input type="text" id="editFirstName" required>
+                    <span class="form-error">First name is required.</span>
+                  </div>
+                  <div class="pf-input-field">
+                    <label>Last Name *</label>
+                    <input type="text" id="editLastName" required>
+                    <span class="form-error">Last name is required.</span>
+                  </div>
+                  <div class="pf-input-field">
+                    <label>Date of Birth *</label>
+                    <input type="date" id="editDob" required>
+                    <span class="form-error">Date of birth is required.</span>
+                  </div>
+                  <div class="pf-input-field">
+                    <label>Gender *</label>
+                    <select id="editGender" required>
+                      <option value="">Select gender</option>
+                      <option>Male</option><option>Female</option><option>Other</option>
+                    </select>
+                    <span class="form-error">Please select a gender.</span>
+                  </div>
+                  <div class="pf-input-field">
+                    <label>Blood Group</label>
+                    <select id="editBloodGroup">
+                      <option value="">Select blood group</option>
+                      <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                      <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                    </select>
+                  </div>
                   <div class="pf-input-field">
                     <label>Phone Number *</label>
                     <input type="tel" id="editPhone" required>
                     <span class="form-error">Valid phone number is required.</span>
                   </div>
                   <div class="pf-input-field">
-                    <label>Address</label>
-                    <input type="text" id="editAddress" placeholder="Street address">
+                    <label>Emergency Contact</label>
+                    <input type="tel" id="editEmergency" placeholder="e.g. 9876543210">
+                  </div>
+                  <div class="pf-input-field">
+                    <label>Insurance Number</label>
+                    <input type="text" id="editInsurance" placeholder="Policy / card number">
                   </div>
                 </div>
+                <div class="pf-input-field">
+                  <label>Address</label>
+                  <input type="text" id="editAddress" placeholder="Street address">
+                </div>
+                <p class="pf-note" style="margin-top:10px;">Email cannot be changed here — it is your login email.</p>
                 <div class="pf-actions">
                   <button type="button" class="btn-blue" id="saveBtn" onclick="saveProfile()">Save Changes</button>
                 </div>
@@ -279,7 +322,7 @@
 
   function completeProfile() {
     document.getElementById('editSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    document.getElementById('editPhone').focus();
+    document.getElementById('editFirstName').focus();
   }
 
   async function loadNextAppointment(pid) {
@@ -320,9 +363,19 @@
       document.getElementById('viewDob').textContent = myPatient.date_of_birth || '—';
       document.getElementById('viewGender').textContent = myPatient.gender || '—';
       document.getElementById('viewBlood').textContent = myPatient.blood_group || '—';
+      document.getElementById('viewAddress').textContent = myPatient.address || '—';
+      document.getElementById('viewEmergency').textContent = myPatient.emergency_contact || '—';
+      document.getElementById('viewInsurance').textContent = myPatient.insurance_number || '—';
       document.getElementById('viewReg').textContent = (myPatient.registration_date || '').toString().slice(0, 10) || '—';
+      document.getElementById('editFirstName').value = myPatient.first_name || '';
+      document.getElementById('editLastName').value = myPatient.last_name || '';
+      document.getElementById('editDob').value = (myPatient.date_of_birth || '').toString().slice(0, 10);
+      document.getElementById('editGender').value = myPatient.gender || '';
+      document.getElementById('editBloodGroup').value = myPatient.blood_group || '';
       document.getElementById('editPhone').value = myPatient.phone || '';
       document.getElementById('editAddress').value = myPatient.address || '';
+      document.getElementById('editEmergency').value = myPatient.emergency_contact || '';
+      document.getElementById('editInsurance').value = myPatient.insurance_number || '';
       // Hero + stat cards + ring
       document.getElementById('heroName').textContent = fullName;
       document.getElementById('heroEmail').textContent = myPatient.email || email;
@@ -348,21 +401,65 @@
   }
 
   async function saveProfile() {
+    const firstName = document.getElementById('editFirstName').value.trim();
+    const lastName = document.getElementById('editLastName').value.trim();
+    const dob = document.getElementById('editDob').value;
+    const gender = document.getElementById('editGender').value;
     const phone = document.getElementById('editPhone').value.trim();
-    if (!phone) { document.getElementById('editPhone').classList.add('is-invalid'); showToast('Please enter a phone number.', 'warning'); return; }
-    document.getElementById('editPhone').classList.remove('is-invalid');
+    /* Required fields must all be filled; optional ones are only sent
+       when they have a value (an empty value must not clear the field). */
+    let valid = true;
+    [['editFirstName', firstName], ['editLastName', lastName], ['editDob', dob], ['editGender', gender], ['editPhone', phone]].forEach(function (pair) {
+      const el = document.getElementById(pair[0]);
+      if (!pair[1]) { el.classList.add('is-invalid'); valid = false; }
+      else el.classList.remove('is-invalid');
+    });
+    if (!valid) { showToast('Please fill in all required fields.', 'warning'); return; }
     const btn = document.getElementById('saveBtn');
     btn.textContent = 'Saving…'; btn.disabled = true;
+    const body = {
+      first_name: firstName,
+      last_name: lastName,
+      date_of_birth: dob,
+      gender: gender,
+      phone: phone,
+    };
+    const bloodGroup = document.getElementById('editBloodGroup').value;
     const address = document.getElementById('editAddress').value.trim();
-    const res = await PatientsAPI.update(myPatient.patient_id, { phone, address });
+    const emergency = document.getElementById('editEmergency').value.trim();
+    const insurance = document.getElementById('editInsurance').value.trim();
+    if (bloodGroup) body.blood_group = bloodGroup;
+    if (address) body.address = address;
+    if (emergency) body.emergency_contact = emergency;
+    if (insurance) body.insurance_number = insurance;
+    const res = await PatientsAPI.update(myPatient.patient_id, body);
     btn.textContent = 'Save Changes'; btn.disabled = false;
     if (res) {
-      myPatient.phone = phone;
-      myPatient.address = address;
+      Object.assign(myPatient, body);
+      const fullName = (firstName + ' ' + lastName).trim() || '—';
+      document.getElementById('viewName').textContent = fullName;
       document.getElementById('viewPhone').textContent = phone;
+      document.getElementById('viewDob').textContent = dob || '—';
+      document.getElementById('viewGender').textContent = gender || '—';
+      document.getElementById('viewBlood').textContent = bloodGroup || '—';
+      document.getElementById('viewAddress').textContent = address || '—';
+      document.getElementById('viewEmergency').textContent = emergency || '—';
+      document.getElementById('viewInsurance').textContent = insurance || '—';
+      document.getElementById('heroName').textContent = fullName;
+      document.getElementById('avatarInitial').textContent = (fullName || 'G').trim().charAt(0).toUpperCase();
+      document.getElementById('statBlood').textContent = bloodGroup || '—';
+      document.getElementById('statGender').textContent = gender || '—';
+      document.getElementById('statDob').textContent = dob || '—';
+      document.getElementById('chipBlood').textContent = 'Blood: ' + (bloodGroup || '—');
+      document.getElementById('chipGender').textContent = gender || '—';
       updateCompleteness();
       showToast('Profile updated.', 'success');
     }
+  }
+
+  function editProfile() {
+    document.getElementById('editSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('editFirstName').focus();
   }
 
   async function createProfile() {
