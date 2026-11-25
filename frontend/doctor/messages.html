@@ -17,8 +17,10 @@
     .conv-row { display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); cursor:pointer; }
     .conv-row:hover { background:rgba(255,255,255,.04); }
     .conv-row.active { background:rgba(59,130,246,.16); }
+    .conv-row.unread { background:rgba(59,130,246,.08); }
     .conv-row:last-child { border-bottom:none; }
     .conv-name { font-weight:600; color:#f1f5f9; font-size:14px; }
+    .conv-pid { font-weight:500; font-size:11px; color:#7ea6e8; margin-left:6px; }
     .conv-preview { font-size:12.5px; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px; }
     .conv-time { font-size:11px; color:#94a3b8; margin-top:2px; }
     .conv-unread { min-width:20px; height:20px; line-height:20px; text-align:center; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
@@ -26,6 +28,42 @@
     .thread-footer { display:flex; gap:8px; padding:12px 14px; border-top:1px solid rgba(255,255,255,.12); }
     .thread-footer input { flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:10px 14px; color:#f1f5f9; font-size:13.5px; outline:none; min-width:0; }
     .thread-footer input:focus { border-color:#60a5fa; }
+
+    /* ── Demo-matched additions (doctor Messages redesign) ── */
+    .msg-search { padding:12px 14px 0; }
+    .msg-search input { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 14px; color:#f1f5f9; font-size:13px; outline:none; box-sizing:border-box; }
+    .msg-search input::placeholder { color:#94a3b8; }
+    .msg-search input:focus { border-color:#60a5fa; }
+    .filter-chips { display:flex; gap:8px; padding:12px 14px 4px; }
+    .chip { border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#cbd5e1; border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:600; cursor:pointer; }
+    .chip:hover { background:rgba(255,255,255,.12); color:#f1f5f9; }
+    .chip.active { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+    .conv-avatar-wrap { position:relative; flex-shrink:0; }
+    .recent-dot { position:absolute; right:0; bottom:2px; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #0d2f6b; }
+    .thread-header { display:flex; align-items:center; gap:10px; }
+    .thread-header .card-header-left { flex:1; min-width:0; }
+    .thread-back { display:none; width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
+    .thread-back:hover { background:rgba(255,255,255,.14); }
+    .thread-actions { display:flex; gap:8px; flex-shrink:0; }
+    .icon-btn { width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+    .icon-btn:hover:not(:disabled) { background:rgba(59,130,246,.35); border-color:#60a5fa; }
+    .icon-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .appt-strip { padding:10px 18px; font-size:12.5px; color:#bfdbfe; background:rgba(59,130,246,.14); border-bottom:1px solid rgba(255,255,255,.08); }
+    .appt-strip strong { color:#fff; }
+    .chat-day-sep { align-self:center; background:rgba(255,255,255,.10); color:#cbd5e1; font-size:11.5px; font-weight:600; border-radius:999px; padding:4px 12px; margin:6px 0 2px; }
+    .chat-msg.own { background:linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .chat-ticks { font-size:11px; opacity:.55; margin-left:4px; letter-spacing:-1px; }
+    .quick-replies { display:flex; gap:8px; flex-wrap:wrap; padding:10px 14px 0; }
+    .qr-chip { border:1px solid rgba(96,165,250,.45); background:rgba(59,130,246,.12); color:#bfdbfe; border-radius:999px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
+    .qr-chip:hover { background:rgba(59,130,246,.28); color:#fff; }
+    .attach-btn { width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
+    .attach-btn:hover { background:rgba(255,255,255,.14); }
+    @media (max-width: 900px) {
+      #threadCard { display:none; }
+      #messagesWrap.show-thread #threadCard { display:block; }
+      #messagesWrap.show-thread #convListCard { display:none; }
+      .thread-back { display:inline-flex; }
+    }
   </style>
 </head>
 <body class="dash-blue">
@@ -52,25 +90,47 @@
 
       <div id="messagesWrap" class="msg-layout" style="display:none;">
         <!-- Conversation list -->
-        <div class="card">
+        <div class="card" id="convListCard">
           <div class="card-header">
             <div class="card-header-left"><h3>Conversations</h3><p>Patients who messaged you</p></div>
+          </div>
+          <div class="msg-search">
+            <input type="text" id="convSearch" placeholder="Search patients…" autocomplete="off"
+                   oninput="onConvSearch(this.value)">
+          </div>
+          <div class="filter-chips">
+            <button type="button" class="chip active" id="chipAll" onclick="setConvFilter('all')">All</button>
+            <button type="button" class="chip" id="chipUnread" onclick="setConvFilter('unread')">Unread</button>
           </div>
           <div id="convList"><div class="spinner" style="margin:24px auto;"></div></div>
         </div>
 
         <!-- Thread -->
-        <div class="card">
-          <div class="card-header">
+        <div class="card" id="threadCard">
+          <div class="card-header thread-header">
+            <button type="button" class="thread-back" id="threadBackBtn" onclick="backToList()" title="Back to conversations">&#8592;</button>
             <div class="card-header-left">
               <h3 id="threadTitle">Select a conversation</h3>
               <p id="threadSubtitle">Pick a patient on the left to read and reply</p>
             </div>
+            <div class="thread-actions">
+              <button type="button" class="icon-btn" id="videoCallBtn" onclick="joinVideoCall()"
+                      title="Video call is available once the appointment is Confirmed" disabled>&#128247;</button>
+              <button type="button" class="icon-btn" id="voiceCallBtn" onclick="voiceCallNote()"
+                      title="Voice call">&#128222;</button>
+            </div>
           </div>
+          <div class="appt-strip" id="apptStrip" style="display:none;"></div>
           <div class="thread-body" id="threadBody">
             <div class="chat-empty">No conversation selected yet.</div>
           </div>
+          <div class="quick-replies" id="quickReplies" style="display:none;">
+            <button type="button" class="qr-chip" onclick="fillReply(this)">Please share your reports</button>
+            <button type="button" class="qr-chip" onclick="fillReply(this)">Take the prescribed medicine on time</button>
+            <button type="button" class="qr-chip" onclick="fillReply(this)">Your appointment is confirmed</button>
+          </div>
           <div class="thread-footer" id="threadFooter" style="display:none;">
+            <button type="button" class="attach-btn" onclick="attachNote()" title="Attach a file">&#128206;</button>
             <input type="text" id="replyInput" placeholder="Type a reply…" autocomplete="off"
                    onkeydown="if (event.key === 'Enter') sendReply()">
             <button type="button" class="btn btn-primary" onclick="sendReply()">Send</button>
@@ -102,15 +162,20 @@
   }
 
   let myDid = null;
+  let myDoctorName = '';
   let conversations = [];   /* { patient_id, name, last, lastAt, unread } */
   let patientNames = {};
   let openPid = null;
   let threadTimer = null;
   let listTimer = null;
+  let convFilter = 'all';   /* 'all' | 'unread' */
+  let convQuery = '';       /* lowercase search text */
+  let nextAppt = null;      /* nearest upcoming appointment for the open thread */
 
   /* DID is resolved exactly like the patient PID pattern:
      cached sessionStorage 'hms_did', else DoctorsAPI.byEmail(getMyEmail()). */
   async function resolveMyDoctor() {
+    try { myDoctorName = sessionStorage.getItem('hms_doctor_name') || ''; } catch (e) {}
     const cached = sessionStorage.getItem('hms_did');
     if (cached) return parseInt(cached, 10);
     const email = getMyEmail();
@@ -118,6 +183,8 @@
     const res = await DoctorsAPI.byEmail(email);
     if (res && res.doctor) {
       sessionStorage.setItem('hms_did', String(res.doctor.doctor_id));
+      myDoctorName = ((res.doctor.first_name || '') + ' ' + (res.doctor.last_name || '')).trim();
+      try { sessionStorage.setItem('hms_doctor_name', myDoctorName); } catch (e) {}
       return res.doctor.doctor_id;
     }
     return null;
@@ -153,17 +220,47 @@
     renderConversations();
   }
 
+  /* Green dot = the patient's last message arrived within the last 60
+     minutes (derived from the real created_at timestamp — no presence data). */
+  function isRecentlyActive(c) {
+    const ts = c.last && c.last.created_at ? new Date(c.last.created_at).getTime() : NaN;
+    return !isNaN(ts) && (Date.now() - ts) <= 60 * 60 * 1000;
+  }
+
+  function onConvSearch(value) {
+    convQuery = String(value || '').trim().toLowerCase();
+    renderConversations();
+  }
+
+  function setConvFilter(filter) {
+    convFilter = filter;
+    document.getElementById('chipAll').classList.toggle('active', filter === 'all');
+    document.getElementById('chipUnread').classList.toggle('active', filter === 'unread');
+    renderConversations();
+  }
+
   function renderConversations() {
     const list = document.getElementById('convList');
     if (!conversations.length) {
       list.innerHTML = '<div class="chat-empty">No messages yet.<br>When a patient chats with you, their conversation appears here.</div>';
       return;
     }
-    list.innerHTML = conversations.map(function (c) {
-      return '<div class="conv-row' + (c.patient_id === openPid ? ' active' : '') + '" onclick="openThread(' + c.patient_id + ')">' +
-        '<span class="doctor-avatar">' + esc(initials(c.name)) + '</span>' +
+    const filtered = conversations.filter(function (c) {
+      if (convFilter === 'unread' && !c.unread) return false;
+      if (convQuery && String(c.name || '').toLowerCase().indexOf(convQuery) === -1) return false;
+      return true;
+    });
+    if (!filtered.length) {
+      list.innerHTML = '<div class="chat-empty">' +
+        (convQuery ? 'No patients match your search.' : 'No unread conversations.') + '</div>';
+      return;
+    }
+    list.innerHTML = filtered.map(function (c) {
+      return '<div class="conv-row' + (c.patient_id === openPid ? ' active' : '') + (c.unread ? ' unread' : '') + '" onclick="openThread(' + c.patient_id + ')">' +
+        '<span class="conv-avatar-wrap"><span class="doctor-avatar">' + esc(initials(c.name)) + '</span>' +
+        (isRecentlyActive(c) ? '<span class="recent-dot" title="Recently active"></span>' : '') + '</span>' +
         '<div style="flex:1; min-width:0;">' +
-          '<div class="conv-name">' + esc(c.name) + '</div>' +
+          '<div class="conv-name">' + esc(c.name) + '<span class="conv-pid">PID-' + String(c.patient_id).padStart(4, '0') + '</span></div>' +
           '<div class="conv-preview">' + esc(c.last.text || '') + '</div>' +
           '<div class="conv-time">' + esc(String(c.last.created_at || '').slice(0, 16)) + '</div>' +
         '</div>' +
@@ -179,13 +276,106 @@
     document.getElementById('threadTitle').textContent = name;
     document.getElementById('threadSubtitle').textContent = 'Patient ID: PID-' + String(pid).padStart(4, '0');
     document.getElementById('threadFooter').style.display = 'flex';
+    document.getElementById('quickReplies').style.display = 'flex';
     document.getElementById('replyInput').value = '';
+    document.getElementById('messagesWrap').classList.add('show-thread');
     renderConversations();
+    loadApptStrip(pid);
     await loadThread();
     MessagesAPI.markRead(pid, myDid).then(function () { loadConversations(); });
     if (threadTimer) clearInterval(threadTimer);
     threadTimer = setInterval(function () { loadThread(true); }, 10000);
     document.getElementById('replyInput').focus();
+  }
+
+  /* Phone: back to the conversation list. */
+  function backToList() {
+    if (threadTimer) { clearInterval(threadTimer); threadTimer = null; }
+    openPid = null;
+    nextAppt = null;
+    document.getElementById('messagesWrap').classList.remove('show-thread');
+    document.getElementById('threadTitle').textContent = 'Select a conversation';
+    document.getElementById('threadSubtitle').textContent = 'Pick a patient on the left to read and reply';
+    document.getElementById('threadFooter').style.display = 'none';
+    document.getElementById('quickReplies').style.display = 'none';
+    document.getElementById('apptStrip').style.display = 'none';
+    document.getElementById('threadBody').innerHTML = '<div class="chat-empty">No conversation selected yet.</div>';
+    setVideoButton(null);
+    renderConversations();
+  }
+
+  /* Best-effort: nearest upcoming appointment for this patient, from the
+     doctor's own enriched assignment rows. Never blocks the thread. */
+  async function loadApptStrip(pid) {
+    const strip = document.getElementById('apptStrip');
+    strip.style.display = 'none';
+    nextAppt = null;
+    setVideoButton(null);
+    try {
+      const res = await DoctorsAPI.forDoctor(myDid);
+      const rows = (res && res.assignments) || [];
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const upcoming = rows.filter(function (a) {
+        if (a.patient_id !== pid) return false;
+        if (['Confirmed', 'Scheduled', 'Active'].indexOf(a.status) === -1) return false;
+        const d = new Date(a.appointment_date);
+        return !isNaN(d.getTime()) && d >= todayStart;
+      }).sort(function (a, b) {
+        return String(a.appointment_date || '').localeCompare(String(b.appointment_date || ''));
+      });
+      if (!upcoming.length) return;
+      nextAppt = upcoming[0];
+      strip.innerHTML = '<strong>Next appointment:</strong> ' + esc(String(nextAppt.appointment_date || '').slice(0, 16)) +
+        ' &middot; ' + esc(nextAppt.status || '');
+      strip.style.display = 'block';
+      setVideoButton(nextAppt);
+    } catch (e) { /* strip stays hidden; chat still works */ }
+  }
+
+  function setVideoButton(appt) {
+    const btn = document.getElementById('videoCallBtn');
+    const ok = !!(appt && appt.status === 'Confirmed');
+    btn.disabled = !ok;
+    btn.title = ok ? 'Join video call' : 'Video call is available once the appointment is Confirmed';
+  }
+
+  function joinVideoCall() {
+    if (!nextAppt || nextAppt.status !== 'Confirmed') return;
+    const url = '../video-call.html?assignment_id=' + encodeURIComponent(nextAppt.assignment_id) +
+      '&role=doctor&doctor_name=' + encodeURIComponent(myDoctorName || '') +
+      '&appointment_date=' + encodeURIComponent(nextAppt.appointment_date || '');
+    window.location.href = url;
+  }
+
+  function voiceCallNote() {
+    if (typeof showToast === 'function') showToast('Voice calls are not available yet — use video call', 'info');
+  }
+
+  function attachNote() {
+    if (typeof showToast === 'function') showToast('File sharing is coming soon', 'info');
+  }
+
+  function fillReply(chip) {
+    const input = document.getElementById('replyInput');
+    input.value = chip.textContent.trim();
+    input.focus();
+  }
+
+  function ymdOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function dayLabel(ymd) {
+    const today = new Date();
+    if (ymd === ymdOf(today)) return 'Today';
+    const y = new Date(today);
+    y.setDate(y.getDate() - 1);
+    if (ymd === ymdOf(y)) return 'Yesterday';
+    const parts = String(ymd).split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const m = months[parseInt(parts[1], 10) - 1] || '';
+    return parseInt(parts[2], 10) + ' ' + m + ' ' + parts[0];
   }
 
   async function loadThread(quiet) {
@@ -197,11 +387,23 @@
       body.innerHTML = '<div class="chat-empty">No messages in this conversation yet.</div>';
       return;
     }
-    body.innerHTML = msgs.map(function (m) {
+    const sorted = msgs.slice().sort(function (a, b) {
+      return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+    });
+    let html = '';
+    let currentDay = '';
+    sorted.forEach(function (m) {
+      const day = String(m.created_at || '').slice(0, 10);
+      if (day && day !== currentDay) {
+        currentDay = day;
+        html += '<div class="chat-day-sep">' + esc(dayLabel(day)) + '</div>';
+      }
       const own = m.sender === 'doctor';
-      return '<div class="chat-msg ' + (own ? 'own' : 'other') + '">' + esc(m.text) +
-        '<span class="chat-msg-time">' + esc(String(m.created_at || '').slice(0, 16)) + '</span></div>';
-    }).join('');
+      html += '<div class="chat-msg ' + (own ? 'own' : 'other') + '">' + esc(m.text) +
+        '<span class="chat-msg-time">' + esc(String(m.created_at || '').slice(0, 16)) +
+        (own ? '<span class="chat-ticks" title="Sent">&#10003;&#10003;</span>' : '') + '</span></div>';
+    });
+    body.innerHTML = html;
     body.scrollTop = body.scrollHeight;
   }
 
