@@ -938,7 +938,7 @@ resource "aws_s3_object" "frontend_config_js" {
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "HealtheCare frontend"
+  comment             = "HealthCare frontend"
   default_root_object = "index.html"
   price_class         = "PriceClass_200"
 

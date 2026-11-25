@@ -1,6 +1,6 @@
 # Lambda test events
 
-Saved test events for the HealtheCare Lambda functions. Each file is a
+Saved test events for the HealthCare Lambda functions. Each file is a
 ready-to-paste API Gateway proxy event — no JWT token needed, the handlers
 do not check `Authorization` themselves.
 

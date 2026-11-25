@@ -1,5 +1,5 @@
 /* ============================================================
-   HealtheCare — Video Consultation (real Jitsi Meet call)
+   HealthCare — Video Consultation (real Jitsi Meet call)
    Shared logic for frontend/video-call.html.
    This is the ONLY place that computes Jitsi room names,
    joins a call, or reads/writes "[VIDEO-CALL ...]" history
@@ -20,7 +20,7 @@ function roomName(assignmentId, appointmentDate) {
   }
   var hex = (hash >>> 0).toString(16).padStart(8, '0');
   var safeId = String(assignmentId).replace(/[^a-z0-9]/gi, '').toLowerCase();
-  return 'healthecare-appt-' + safeId + '-' + hex;
+  return 'healthcare-appt-' + safeId + '-' + hex;
 }
 
 /* ── Duration formatting (seconds -> "MM:SS") ── */
@@ -155,7 +155,7 @@ var VideoCall = (function () {
         width: '100%',
         height: '100%',
         parentNode: container,
-        userInfo: { displayName: opts.displayName || 'HealtheCare' },
+        userInfo: { displayName: opts.displayName || 'HealthCare' },
         configOverwrite: {
           startWithAudioMuted: false,
           startWithVideoMuted: false,

@@ -1,4 +1,4 @@
-# 🏥 AWS Hospital Management System (HealtheCare)
+# 🏥 AWS Hospital Management System (HealthCare)
 
 A cloud-native hospital management application — **12 DynamoDB tables**,
 **7 serverless Lambda microservices**, **API Gateway**, **S3 + CloudFront**

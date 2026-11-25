@@ -1,5 +1,5 @@
 /* ============================================================
-   HealtheCare — Shared UI Utilities
+   HealthCare — Shared UI Utilities
    Sidebar injection, Toast, Confirm Dialog, Helpers
    ============================================================ */
 
@@ -283,7 +283,7 @@ function buildSidebarHTML() {
       <div class="sidebar-user-role">Hospital Admin</div>
     </div>
   </div>
-  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealtheCare · by Gokul Rathod</div>
+  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealthCare · by Gokul Rathod</div>
   <a href="${p}login.html" class="nav-item" id="logoutBtn" style="color:var(--red-600); margin-top:4px;">
     <span class="nav-icon">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -403,7 +403,7 @@ function buildPatientSidebarHTML() {
       <div class="sidebar-user-role">Patient</div>
     </div>
   </div>
-  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealtheCare · by Gokul Rathod</div>
+  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealthCare · by Gokul Rathod</div>
   <a href="${p}login.html" class="nav-item" id="logoutBtn" style="color:var(--red-600); margin-top:4px;">
     <span class="nav-icon">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -487,7 +487,7 @@ function buildDoctorSidebarHTML() {
       <div class="sidebar-user-role">Doctor</div>
     </div>
   </div>
-  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealtheCare · by Gokul Rathod</div>
+  <div style="padding:10px 16px 0; font-size:11px; letter-spacing:.02em; color:rgba(226,238,255,.45);">HealthCare · by Gokul Rathod</div>
   <a href="${p}login.html" class="nav-item" id="logoutBtn" style="color:var(--red-600); margin-top:4px;">
     <span class="nav-icon">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

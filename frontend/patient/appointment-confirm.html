@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Appointment Confirmation — HealtheCare</title>
+  <title>Appointment Confirmation — HealthCare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
@@ -78,7 +78,7 @@
           <!-- LEFT: appointment details -->
           <div class="card">
             <div class="ticket-head">
-              <div class="eyebrow">HealtheCare · Appointment</div>
+              <div class="eyebrow">HealthCare · Appointment</div>
               <div id="ticketStatus" style="margin-top:10px;"></div>
               <h2 id="ticketTitle">Appointment</h2>
               <p id="ticketSub"></p>
@@ -234,7 +234,7 @@
 
     // Details text (shown if the QR cannot be drawn)
     var detailsText = [
-      'HealtheCare Appointment',
+      'HealthCare Appointment',
       `Booking ID: HCA-${asg.assignment_id}`,
       `Patient: ${patName} (PID ${asg.patient_id})`,
       `Doctor: ${docName}`,
@@ -362,7 +362,7 @@
     if (!url) { showToast('QR code is not ready yet.', 'warning'); return; }
     const a = document.createElement('a');
     a.href = url;
-    a.download = `HealtheCare-Appointment-HCA-${asgId}.png`;
+    a.download = `HealthCare-Appointment-HCA-${asgId}.png`;
     a.click();
   }
 

@@ -1,6 +1,6 @@
 # Manual deployment (from your own machine)
 
-Deploy the whole HealtheCare project with Terraform. Current stack:
+Deploy the whole HealthCare project with Terraform. Current stack:
 **12 DynamoDB tables, 7 Lambda services + db-init + Cognito migration
 Lambda, API Gateway, S3 + CloudFront, AWS Cognito sign-in (password
 only — no OTP at sign-in), patient panel with real video consultation

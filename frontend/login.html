@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In — HealtheCare Management System</title>
+  <title>Sign In — HealthCare Management System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
         </svg>
       </div>
-      <span class="logo-name">HealtheCare</span>
+      <span class="logo-name">HealthCare</span>
     </div>
 
     <h1>Your hospital,<br>one dashboard.</h1>
@@ -73,11 +73,11 @@
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
-        <span style="font-size:18px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">HealtheCare</span>
+        <span style="font-size:18px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">HealthCare</span>
       </div>
 
       <h2 id="loginTitle">Welcome back</h2>
-      <p class="login-subtitle" id="loginSubtitle">Sign in to your HealtheCare account</p>
+      <p class="login-subtitle" id="loginSubtitle">Sign in to your HealthCare account</p>
 
       <form id="loginForm" novalidate>
        <div id="step1">
@@ -176,7 +176,7 @@
       </p>
 
       <p style="text-align:center; margin-top:20px; font-size:12px; color:#9ca3af;">
-        © 2026 HealtheCare · by Gokul Rathod
+        © 2026 HealthCare · by Gokul Rathod
       </p>
     </div>
   </div>
@@ -238,7 +238,7 @@
     document.getElementById('step3').style.display = step === 3 ? 'block' : 'none';
     document.getElementById('loginTitle').textContent = step === 1 ? 'Welcome back' : step === 2 ? 'Check your inbox' : 'Reset password';
     document.getElementById('loginSubtitle').textContent = step === 1
-      ? (selectedRole === 'admin' ? 'Sign in to manage the hospital' : 'Sign in to your HealtheCare account')
+      ? (selectedRole === 'admin' ? 'Sign in to manage the hospital' : 'Sign in to your HealthCare account')
       : step === 2 ? 'Enter the 6-digit code we emailed you'
       : 'We will email you a code to reset your password';
     document.getElementById('loginBtnText').textContent = step === 1 ? 'Sign In' : step === 2 ? 'Verify & Sign In' : (resetPhase === 1 ? 'Send Code' : 'Reset Password');
@@ -266,7 +266,7 @@
       document.getElementById('loginSubtitle').textContent = selectedRole === 'admin'
         ? 'Sign in to manage the hospital'
         : selectedRole === 'doctor' ? 'Sign in to your doctor panel'
-        : 'Sign in to your HealtheCare account';
+        : 'Sign in to your HealthCare account';
     }
     try { localStorage.setItem('hms_login_role', selectedRole); } catch (e) {}
   }
