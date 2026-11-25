@@ -271,6 +271,13 @@
     if (!joined) {
       showError('Video call start nahi hui — refresh karke dobara try karo.');
     } else {
+      /* Patient is waiting from the moment they open this page — set
+         the flag NOW, not only when Jitsi confirms the join. If the
+         embed fails to load (blank "Connecting..."), the doctor still
+         gets the bell + incoming-call popup, because the patient IS
+         waiting. The flag clears when the doctor joins, the call
+         ends, or the patient leaves the page. */
+      if (role === 'patient') setPatientWaiting(asg.assignment_id, true);
       /* Join timeout: if videoConferenceJoined never fires (embed blocked
          or the conference never joins), don't sit on "Connecting..."
          forever — show the error card with the direct-join fallback. */
@@ -344,11 +351,13 @@
     show('summaryWrap');
   }
 
-  /* If the patient closes the tab mid-call, clear the waiting
-     flag best-effort (the doctor's bell also stops showing it
-     60 minutes after the patient joined). */
+  /* If the patient closes the tab, clear the waiting flag
+     best-effort — even if they never joined the room (the flag is
+     set when the page opens, so it must clear on leave too). The
+     doctor's bell also stops showing it 60 minutes after the
+     patient joined. */
   window.addEventListener('pagehide', function () {
-    if (role === 'patient' && callJoined && asg) {
+    if (role === 'patient' && asg) {
       try { setPatientWaiting(asg.assignment_id, false); } catch (e) {}
     }
   });
