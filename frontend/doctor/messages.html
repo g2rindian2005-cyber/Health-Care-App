@@ -7,8 +7,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
-    /* ── Light background + dark premium cards (approved demo look) ── */
-    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    /* ── Midnight Premium (demo option A) ──
+       Dark navy page (#0a1128) + deep-navy cards with blue-to-cyan
+       gradient accents. Page-scoped overrides so this look holds
+       even if the shared stylesheet is cached. */
+    body.dash-blue { background:radial-gradient(1100px 480px at 85% -10%, rgba(37,99,235,.10), transparent 60%), radial-gradient(900px 420px at -10% 110%, rgba(34,211,238,.07), transparent 60%), #0a1128; }
+    .page-header-left h1 { color:#f1f5f9; }
+    .page-header-left p { color:rgba(219,234,254,.78); }
+    .card { background:linear-gradient(155deg, #101d42 0%, #0d1b3e 55%, #0f1e45 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
     .card-header { border-bottom-color:rgba(255,255,255,.12); }
     .card-header-left h3, .card h3 { color:#fff; }
     .card-header-left p { color:rgba(219,234,254,.78); }
@@ -16,46 +22,53 @@
     @media (max-width: 900px) { .msg-layout { grid-template-columns:1fr; } }
     .conv-row { display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); cursor:pointer; }
     .conv-row:hover { background:rgba(255,255,255,.04); }
-    .conv-row.active { background:rgba(59,130,246,.16); }
+    .conv-row.active { background:linear-gradient(90deg, rgba(59,130,246,.28), rgba(34,211,238,.10)); }
     .conv-row.unread { background:rgba(59,130,246,.08); }
     .conv-row:last-child { border-bottom:none; }
     .conv-name { font-weight:600; color:#f1f5f9; font-size:14px; }
-    .conv-pid { font-weight:500; font-size:11px; color:#7ea6e8; margin-left:6px; }
+    .conv-pid { font-weight:500; font-size:11px; color:#67e8f9; margin-left:6px; }
     .conv-preview { font-size:12.5px; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px; }
     .conv-time { font-size:11px; color:#94a3b8; margin-top:2px; }
     .conv-unread { min-width:20px; height:20px; line-height:20px; text-align:center; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
     .thread-body { min-height:320px; max-height:480px; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
+    .thread-body::-webkit-scrollbar { width:8px; }
+    .thread-body::-webkit-scrollbar-thumb { background:#22315c; border-radius:999px; }
+    .thread-body::-webkit-scrollbar-track { background:transparent; }
     .thread-footer { display:flex; gap:8px; padding:12px 14px; border-top:1px solid rgba(255,255,255,.12); }
     .thread-footer input { flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:10px 14px; color:#f1f5f9; font-size:13.5px; outline:none; min-width:0; }
-    .thread-footer input:focus { border-color:#60a5fa; }
+    .thread-footer input:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.18); }
+    .thread-footer .btn-primary { background:linear-gradient(135deg, #3b82f6, #22d3ee); border-color:transparent; box-shadow:0 4px 16px -4px rgba(34,211,238,.5); }
+    .thread-footer .btn-primary:hover { background:linear-gradient(135deg, #3b82f6, #22d3ee); filter:brightness(1.08); }
 
     /* ── Demo-matched additions (doctor Messages redesign) ── */
     .msg-search { padding:12px 14px 0; }
     .msg-search input { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:9px 14px; color:#f1f5f9; font-size:13px; outline:none; box-sizing:border-box; }
     .msg-search input::placeholder { color:#94a3b8; }
-    .msg-search input:focus { border-color:#60a5fa; }
+    .msg-search input:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.18); }
     .filter-chips { display:flex; gap:8px; padding:12px 14px 4px; }
     .chip { border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#cbd5e1; border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:600; cursor:pointer; }
     .chip:hover { background:rgba(255,255,255,.12); color:#f1f5f9; }
-    .chip.active { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+    .chip.active { background:linear-gradient(135deg, #3b82f6, #22d3ee); border-color:transparent; color:#fff; box-shadow:0 4px 14px -4px rgba(34,211,238,.45); }
     .conv-avatar-wrap { position:relative; flex-shrink:0; }
-    .recent-dot { position:absolute; right:0; bottom:2px; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #0d2f6b; }
+    .conv-avatar-wrap .doctor-avatar { background:linear-gradient(135deg, #3b82f6, #22d3ee); }
+    .recent-dot { position:absolute; right:0; bottom:2px; width:11px; height:11px; border-radius:50%; background:#22c55e; border:2px solid #0f1e45; }
     .thread-header { display:flex; align-items:center; gap:10px; }
     .thread-header .card-header-left { flex:1; min-width:0; }
     .thread-back { display:none; width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
     .thread-back:hover { background:rgba(255,255,255,.14); }
     .thread-actions { display:flex; gap:8px; flex-shrink:0; }
     .icon-btn { width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
-    .icon-btn:hover:not(:disabled) { background:rgba(59,130,246,.35); border-color:#60a5fa; }
+    .icon-btn:hover:not(:disabled) { background:rgba(34,211,238,.22); border-color:#22d3ee; }
     .icon-btn:disabled { opacity:.4; cursor:not-allowed; }
-    .appt-strip { padding:10px 18px; font-size:12.5px; color:#bfdbfe; background:rgba(59,130,246,.14); border-bottom:1px solid rgba(255,255,255,.08); }
+    .appt-strip { padding:10px 18px; font-size:12.5px; color:#bfdbfe; background:linear-gradient(90deg, rgba(59,130,246,.20), rgba(34,211,238,.08)); border-bottom:1px solid rgba(255,255,255,.08); }
     .appt-strip strong { color:#fff; }
     .chat-day-sep { align-self:center; background:rgba(255,255,255,.10); color:#cbd5e1; font-size:11.5px; font-weight:600; border-radius:999px; padding:4px 12px; margin:6px 0 2px; }
-    .chat-msg.own { background:linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .chat-msg.other { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.08); }
+    .chat-msg.own { background:linear-gradient(135deg, #3b82f6, #22d3ee); color:#fff; box-shadow:0 4px 14px -6px rgba(34,211,238,.45); }
     .chat-ticks { font-size:11px; opacity:.55; margin-left:4px; letter-spacing:-1px; }
     .quick-replies { display:flex; gap:8px; flex-wrap:wrap; padding:10px 14px 0; }
     .qr-chip { border:1px solid rgba(96,165,250,.45); background:rgba(59,130,246,.12); color:#bfdbfe; border-radius:999px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
-    .qr-chip:hover { background:rgba(59,130,246,.28); color:#fff; }
+    .qr-chip:hover { background:rgba(34,211,238,.22); color:#fff; }
     .attach-btn { width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
     .attach-btn:hover { background:rgba(255,255,255,.14); }
     @media (max-width: 900px) {
@@ -101,6 +114,7 @@
           <div class="filter-chips">
             <button type="button" class="chip active" id="chipAll" onclick="setConvFilter('all')">All</button>
             <button type="button" class="chip" id="chipUnread" onclick="setConvFilter('unread')">Unread</button>
+            <button type="button" class="chip" id="chipActive" onclick="setConvFilter('active')">Active now</button>
           </div>
           <div id="convList"><div class="spinner" style="margin:24px auto;"></div></div>
         </div>
@@ -168,7 +182,7 @@
   let openPid = null;
   let threadTimer = null;
   let listTimer = null;
-  let convFilter = 'all';   /* 'all' | 'unread' */
+  let convFilter = 'all';   /* 'all' | 'unread' | 'active' */
   let convQuery = '';       /* lowercase search text */
   let nextAppt = null;      /* nearest upcoming appointment for the open thread */
 
@@ -236,6 +250,7 @@
     convFilter = filter;
     document.getElementById('chipAll').classList.toggle('active', filter === 'all');
     document.getElementById('chipUnread').classList.toggle('active', filter === 'unread');
+    document.getElementById('chipActive').classList.toggle('active', filter === 'active');
     renderConversations();
   }
 
@@ -247,12 +262,16 @@
     }
     const filtered = conversations.filter(function (c) {
       if (convFilter === 'unread' && !c.unread) return false;
+      if (convFilter === 'active' && !isRecentlyActive(c)) return false;
       if (convQuery && String(c.name || '').toLowerCase().indexOf(convQuery) === -1) return false;
       return true;
     });
     if (!filtered.length) {
-      list.innerHTML = '<div class="chat-empty">' +
-        (convQuery ? 'No patients match your search.' : 'No unread conversations.') + '</div>';
+      let emptyMsg = 'No conversations yet.';
+      if (convQuery) emptyMsg = 'No patients match your search.';
+      else if (convFilter === 'unread') emptyMsg = 'No unread conversations.';
+      else if (convFilter === 'active') emptyMsg = 'No recently active patients.';
+      list.innerHTML = '<div class="chat-empty">' + emptyMsg + '</div>';
       return;
     }
     list.innerHTML = filtered.map(function (c) {
