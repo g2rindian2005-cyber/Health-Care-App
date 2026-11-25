@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .msg-layout { display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+    @media (max-width: 900px) { .msg-layout { grid-template-columns:1fr; } }
+    .conv-row { display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); cursor:pointer; }
+    .conv-row:hover { background:rgba(255,255,255,.04); }
+    .conv-row.active { background:rgba(59,130,246,.16); }
+    .conv-row:last-child { border-bottom:none; }
+    .conv-name { font-weight:600; color:#f1f5f9; font-size:14px; }
+    .conv-preview { font-size:12.5px; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px; }
+    .conv-time { font-size:11px; color:#94a3b8; margin-top:2px; }
+    .conv-unread { min-width:20px; height:20px; line-height:20px; text-align:center; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
+    .thread-body { min-height:320px; max-height:480px; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
+    .thread-footer { display:flex; gap:8px; padding:12px 14px; border-top:1px solid rgba(255,255,255,.12); }
+    .thread-footer input { flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:10px 14px; color:#f1f5f9; font-size:13.5px; outline:none; min-width:0; }
+    .thread-footer input:focus { border-color:#60a5fa; }
+    .picker-row { display:flex; gap:12px; align-items:center; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.08); }
+    .picker-row:last-child { border-bottom:none; }
+    .picker-name { font-weight:600; color:#f1f5f9; font-size:14px; }
+    .picker-sub { font-size:12px; color:#94a3b8; margin-top:2px; }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Messages</h1>
+          <p>Chat with your doctors — pick a conversation on the left, or start a new one</p>
+        </div>
+      </div>
+
+      <!-- No patient record yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Complete your profile first</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a patient record for your account yet. Complete your profile, then you can chat with your doctors here.</p>
+          <a class="btn btn-primary" href="my-profile.html">Go to My Profile</a>
+        </div>
+      </div>
+
+      <div id="messagesWrap" class="msg-layout" style="display:none;">
+        <!-- Conversation list -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Conversations</h3><p>Doctors you have chatted with</p></div>
+            <button type="button" class="btn btn-primary btn-sm" id="newChatBtn" onclick="togglePicker()">New Message</button>
+          </div>
+          <div id="pickerWrap" style="display:none; border-bottom:1px solid rgba(255,255,255,.12);">
+            <div style="padding:10px 14px 4px; font-size:12px; color:#94a3b8;">Pick a doctor to start chatting</div>
+            <div id="pickerList"><div class="spinner" style="margin:16px auto;"></div></div>
+          </div>
+          <div id="convList"><div class="spinner" style="margin:24px auto;"></div></div>
+        </div>
+
+        <!-- Thread -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <h3 id="threadTitle">Select a conversation</h3>
+              <p id="threadSubtitle">Pick a doctor on the left to read and reply</p>
+            </div>
+          </div>
+          <div class="thread-body" id="threadBody">
+            <div class="chat-empty">No conversation selected yet.</div>
+          </div>
+          <div class="thread-footer" id="threadFooter" style="display:none;">
+            <input type="text" id="replyInput" placeholder="Type a message…" autocomplete="off"
+                   onkeydown="if (event.key === 'Enter') sendReply()">
+            <button type="button" class="btn btn-primary" onclick="sendReply()">Send</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'messages', title: 'Messages', subtitle: 'My Care' });
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function initials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function doctorName(doc) {
+    return ((doc.first_name || '') + ' ' + (doc.last_name || '')).trim() || 'Doctor';
+  }
+
+  let myPid = null;
+  let doctors = [];          /* all doctors, from GET /doctors */
+  let doctorById = {};
+  let conversations = [];    /* { doctor_id, name, last, lastAt, unread } */
+  let openDid = null;
+  let threadTimer = null;
+  let listTimer = null;
+
+  /* PID is resolved exactly like the other patient pages:
+     cached sessionStorage 'hms_pid', else PatientsAPI.byEmail(getMyEmail()). */
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) return parseInt(cached, 10);
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  async function loadDoctors() {
+    const res = await DoctorsAPI.list();
+    doctors = (res && res.doctors) || [];
+    doctorById = {};
+    doctors.forEach(function (d) { doctorById[d.doctor_id] = d; });
+  }
+
+  function doctorDisplay(did) {
+    const d = doctorById[did];
+    if (!d) return { name: 'Doctor #' + did, sub: '' };
+    return { name: doctorName(d), sub: (d.specialization || '') + (d.consultation_fee ? ' · ₹' + d.consultation_fee : '') };
+  }
+
+  async function loadConversations() {
+    const res = await MessagesAPI.forPatient(myPid, true);
+    const msgs = (res && res.messages) || [];
+    const byDoctor = {};
+    msgs.forEach(function (m) {
+      const did = m.doctor_id;
+      if (!byDoctor[did]) byDoctor[did] = { doctor_id: did, last: null, unread: 0 };
+      const c = byDoctor[did];
+      if (!c.last || (m.created_at || '') >= (c.last.created_at || '')) c.last = m;
+      if (m.sender === 'doctor' && !m.read_by_patient) c.unread += 1;
+    });
+    conversations = Object.values(byDoctor).sort(function (a, b) {
+      return String(b.last.created_at || '').localeCompare(String(a.last.created_at || ''));
+    });
+    conversations.forEach(function (c) { c.name = doctorDisplay(c.doctor_id).name; });
+    renderConversations();
+  }
+
+  function renderConversations() {
+    const list = document.getElementById('convList');
+    if (!conversations.length) {
+      list.innerHTML = '<div class="chat-empty">No messages yet.<br>Start a chat with your doctor using the New Message button above, or find a doctor on the <a href="find-doctor.html">Find a Doctor</a> page.</div>';
+      return;
+    }
+    list.innerHTML = conversations.map(function (c) {
+      return '<div class="conv-row' + (c.doctor_id === openDid ? ' active' : '') + '" onclick="openThread(' + c.doctor_id + ')">' +
+        '<span class="doctor-avatar">' + esc(initials(c.name)) + '</span>' +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="conv-name">' + esc(c.name) + '</div>' +
+          '<div class="conv-preview">' + esc(c.last.text || '') + '</div>' +
+          '<div class="conv-time">' + esc(String(c.last.created_at || '').slice(0, 16)) + '</div>' +
+        '</div>' +
+        (c.unread ? '<span class="conv-unread">' + c.unread + '</span>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  function renderPicker() {
+    const list = document.getElementById('pickerList');
+    if (!doctors.length) {
+      list.innerHTML = '<div class="chat-empty">No doctors found.</div>';
+      return;
+    }
+    list.innerHTML = doctors.map(function (d) {
+      const disp = doctorDisplay(d.doctor_id);
+      return '<div class="picker-row">' +
+        '<span class="doctor-avatar">' + esc(initials(disp.name)) + '</span>' +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="picker-name">' + esc(disp.name) + '</div>' +
+          '<div class="picker-sub">' + esc(disp.sub) + '</div>' +
+        '</div>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="startNewChat(' + d.doctor_id + ')">Chat</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function togglePicker() {
+    const wrap = document.getElementById('pickerWrap');
+    const show = wrap.style.display === 'none';
+    wrap.style.display = show ? 'block' : 'none';
+    document.getElementById('newChatBtn').textContent = show ? 'Close' : 'New Message';
+    if (show) renderPicker();
+  }
+
+  function startNewChat(did) {
+    document.getElementById('pickerWrap').style.display = 'none';
+    document.getElementById('newChatBtn').textContent = 'New Message';
+    openThread(did);
+  }
+
+  async function openThread(did) {
+    openDid = did;
+    const conv = conversations.find(function (c) { return c.doctor_id === did; });
+    const disp = conv ? { name: conv.name, sub: doctorDisplay(did).sub } : doctorDisplay(did);
+    document.getElementById('threadTitle').textContent = disp.name;
+    document.getElementById('threadSubtitle').textContent = disp.sub || ('Doctor ID: DID-' + String(did).padStart(4, '0'));
+    document.getElementById('threadFooter').style.display = 'flex';
+    document.getElementById('replyInput').value = '';
+    renderConversations();
+    await loadThread();
+    MessagesAPI.markRead(myPid, did).then(function () { loadConversations(); });
+    if (threadTimer) clearInterval(threadTimer);
+    threadTimer = setInterval(function () { loadThread(true); }, 10000);
+    document.getElementById('replyInput').focus();
+  }
+
+  async function loadThread(quiet) {
+    if (!openDid) return;
+    const res = await MessagesAPI.conversation(myPid, openDid, !!quiet);
+    const msgs = (res && res.messages) || [];
+    const body = document.getElementById('threadBody');
+    if (!msgs.length) {
+      body.innerHTML = '<div class="chat-empty">No messages in this conversation yet.<br>Say hello to start the chat.</div>';
+      return;
+    }
+    body.innerHTML = msgs.map(function (m) {
+      const own = m.sender === 'patient';
+      return '<div class="chat-msg ' + (own ? 'own' : 'other') + '">' + esc(m.text) +
+        '<span class="chat-msg-time">' + esc(String(m.created_at || '').slice(0, 16)) + '</span></div>';
+    }).join('');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  async function sendReply() {
+    const input = document.getElementById('replyInput');
+    const text = input.value.trim();
+    if (!text || !openDid || !myPid) return;
+    input.value = '';
+    const res = await MessagesAPI.send({ patient_id: myPid, doctor_id: openDid, sender: 'patient', text: text });
+    if (res) { loadThread(); loadConversations(); }
+  }
+
+  async function init() {
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('messagesWrap').style.display = 'grid';
+    await loadDoctors();
+    await loadConversations();
+    /* A doctor may reply at any time — refresh the list
+       every 30 seconds so new messages appear. */
+    listTimer = setInterval(loadConversations, 30000);
+  }
+
+  init();
+</script>
+</body>
+</html>
