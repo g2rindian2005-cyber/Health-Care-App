@@ -889,6 +889,7 @@ async function _notifDoctorItems() {
           badgeKind: 'waiting',
           isNew: true,
           assignmentId: a.assignment_id,
+          patientName: a.patient_name || 'Patient',
           text: `Patient ${a.patient_name || 'Patient'} is waiting for the video call — Appointment #${a.assignment_id}`,
           time: `Waiting since ${_notifFmtDateTime(a.patient_waiting_at)} · Join now`,
           ts: waitingTs,
@@ -1056,6 +1057,70 @@ function _notifRefreshDot() {
    waiting patient pops up again. Never shows while the doctor is
    already on the video-call page. */
 const NOTIF_INCOMING_KEY = 'hms_incoming_shown';
+const NOTIF_RINGTONE_KEY = 'hms_ringtone_muted';
+
+/* ── Incoming-call ringtone (Web Audio API, no audio file) ────
+   A soft two-tone ring that repeats while the incoming-call popup
+   is on screen, so the doctor hears the call coming — not just a
+   red dot. Best-effort: if the browser blocks audio (autoplay
+   policy) it fails silently and the popup still works visually.
+   The doctor can mute it; the choice persists in localStorage. */
+let _ringCtx = null, _ringTimer = null, _ringMuted = false;
+try { _ringMuted = localStorage.getItem(NOTIF_RINGTONE_KEY) === '1'; } catch (e) {}
+function _ringtoneMuted() { return _ringMuted; }
+function _setRingtoneMuted(m) {
+  _ringMuted = !!m;
+  try { localStorage.setItem(NOTIF_RINGTONE_KEY, _ringMuted ? '1' : '0'); } catch (e) {}
+  if (_ringMuted) _stopRingtone(); else _startRingtone();
+}
+function _ringBeep(freq, when, dur) {
+  try {
+    const o = _ringCtx.createOscillator(), g = _ringCtx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.18, when + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    o.connect(g); g.connect(_ringCtx.destination);
+    o.start(when); o.stop(when + dur + 0.05);
+  } catch (e) {}
+}
+function _startRingtone() {
+  if (_ringMuted || _ringTimer) return;
+  try {
+    if (!_ringCtx) _ringCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ringCtx.state === 'suspended') _ringCtx.resume();
+    const ringOnce = function () {
+      if (!_ringCtx) return;
+      const t = _ringCtx.currentTime + 0.05;
+      _ringBeep(880, t, 0.28); _ringBeep(880, t + 0.35, 0.28);
+      _ringBeep(1174, t + 0.9, 0.28); _ringBeep(1174, t + 1.25, 0.28);
+    };
+    ringOnce();
+    _ringTimer = setInterval(ringOnce, 2200);
+  } catch (e) { /* audio blocked — popup still works */ }
+}
+function _stopRingtone() {
+  if (_ringTimer) { clearInterval(_ringTimer); _ringTimer = null; }
+}
+
+/* Live "Waiting since" timer for the incoming-call popup: counts
+   up from the moment the patient started waiting. Cleared when
+   the popup is hidden. */
+let _incomingTimer = null;
+function _stopIncomingTimer() {
+  if (_incomingTimer) { clearInterval(_incomingTimer); _incomingTimer = null; }
+}
+function _fmtElapsed(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60), r = s % 60;
+  return (m < 10 ? '0' + m : '' + m) + ':' + (r < 10 ? '0' + r : '' + r);
+}
+function _initials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function _notifIncomingShown() {
   try {
@@ -1071,6 +1136,8 @@ function _notifMarkIncomingShown(id) {
   } catch (e) {}
 }
 function _notifHideIncomingCall() {
+  _stopRingtone();
+  _stopIncomingTimer();
   const m = document.getElementById('incomingCallModal');
   if (m) m.hidden = true;
 }
@@ -1092,18 +1159,41 @@ function _notifShowIncomingCall(result) {
     modal.hidden = true;
     document.body.appendChild(modal);
   }
+  const patientName = waiting.patientName || 'Patient';
+  const waitingTs = waiting.ts || Date.now();
+  const sinceText = waiting.time ? waiting.time.replace(/ · Join now$/, '') : '';
   modal.innerHTML = `
     <div class="incoming-call-card">
+      <button type="button" class="incoming-call-mute" id="incomingCallMute" title="Ringtone on/off">${_ringtoneMuted() ? '🔇' : '🔔'}</button>
+      <div class="incoming-call-avatar">${_notifEscape(_initials(patientName))}</div>
       <div class="incoming-call-title">Incoming Video Call</div>
-      <div class="incoming-call-text">${_notifEscape(waiting.text)}</div>
-      ${waiting.time ? `<div class="incoming-call-time">${_notifEscape(waiting.time)}</div>` : ''}
+      <div class="incoming-call-name">${_notifEscape(patientName)}</div>
+      <div class="incoming-call-text">Appointment #${_notifEscape(waiting.assignmentId)} — is waiting for the video call</div>
+      <div class="incoming-call-time">${_notifEscape(sinceText)} · <span id="incomingCallElapsed">00:00</span></div>
       <div class="incoming-call-actions">
-        <a class="btn btn-primary" href="${_notifEscape(waiting.href)}">Join Video Call</a>
+        <a class="btn btn-primary" href="${_notifEscape(waiting.href)}" id="incomingCallJoin">Join Video Call</a>
         <button type="button" class="btn" id="incomingCallDismiss">Dismiss</button>
       </div>
     </div>`;
   const dismiss = modal.querySelector('#incomingCallDismiss');
   if (dismiss) dismiss.addEventListener('click', _notifHideIncomingCall);
+  const join = modal.querySelector('#incomingCallJoin');
+  if (join) join.addEventListener('click', function () { _stopRingtone(); _stopIncomingTimer(); });
+  const mute = modal.querySelector('#incomingCallMute');
+  if (mute) mute.addEventListener('click', function () {
+    _setRingtoneMuted(!_ringtoneMuted());
+    mute.textContent = _ringtoneMuted() ? '🔇' : '🔔';
+  });
+  /* Live "Waiting since" timer — counts up from when the patient
+     started waiting. */
+  _stopIncomingTimer();
+  const tick = function () {
+    const el = document.getElementById('incomingCallElapsed');
+    if (el) el.textContent = _fmtElapsed(Date.now() - waitingTs);
+  };
+  tick();
+  _incomingTimer = setInterval(tick, 1000);
+  _startRingtone();
   modal.hidden = false;
 }
 
