@@ -25,16 +25,20 @@ from dynamodb import (
     get_item, scan_all, query_index, put_item, update_item, delete_item,
     fetch_by_ids, full_name, next_id, now,
     PATIENTS, BILLS, PAYMENTS, DISEASES, ASSIGNMENTS, DOCTORS,
+    LAB_TESTS, LAB_ORDERS, MEDICINES, PRESCRIPTIONS,
 )
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "email"))
-# Email is optional at runtime; import lazily so packaging stays flexible
+# Email helper (send_email.py + smtp_config.py + templates/) is
+# packaged inside this Lambda's own directory, so a plain import
+# works at runtime — same pattern as the doctor/lab/pharmacy
+# Lambdas. (The old sys.path hack to the shared email/ folder is
+# gone: that folder is never packaged into the Lambda zip, so the
+# import silently failed at runtime and no email was ever sent.)
 try:
-    from send_email import send_registration_email  # noqa: E402
+    from send_email import send_registration_email, send_patient_history_email  # noqa: E402
 except Exception:
     send_registration_email = None
+    send_patient_history_email = None
 
 
 def _body(event):
@@ -112,6 +116,100 @@ def _dispatch(event, context):
                 "gender", "phone", "email", "blood_group", "registration_date",
                 "address", "city", "pincode"]
         return _json(200, {"patient": {k: match[k] for k in cols if k in match}})
+
+    # ---- SEND PATIENT HISTORY REPORT BY EMAIL ----
+    # The hospital emails the patient's complete medical record
+    # (patient history) to the patient. The report is generated from
+    # the Patient History page — all the patient's data in one place —
+    # and sent from there. The email goes to the address on the
+    # patient record — never to a blank address. A failed send
+    # returns 502 and nothing is marked sent.
+    if method == "POST" and len(_seg) == 3 and _seg[0] == "patients" and _seg[2] == "send-history-report":
+        import html as _html
+        pid = int(_seg[1])
+        patient = get_item(PATIENTS, pid)
+        if not patient:
+            return _json(404, {"error": "Patient not found"})
+        email = (patient.get("email") or "").strip()
+        if not email:
+            return _json(400, {"error": "The patient has no email address on file — add an email to the patient record first"})
+        if not send_patient_history_email:
+            return _json(500, {"error": "Email service is not configured"})
+
+        def _esc(v):
+            return _html.escape(str(v if v is not None else ""))
+
+        def _row(cells):
+            tds = "".join(
+                '<td style="padding:8px;border-bottom:1px solid #eee;">%s</td>' % c
+                for c in cells)
+            return "<tr>%s</tr>" % tds
+
+        def _empty(msg):
+            return ('<tr><td colspan="3" style="padding:8px;color:#78909c;">%s</td></tr>'
+                    % _esc(msg))
+
+        # Appointments (with doctor names)
+        assignments = _sort(
+            query_index(ASSIGNMENTS, "patient_id-index", "patient_id", pid),
+            "appointment_date")
+        _docs = fetch_by_ids(DOCTORS, [a.get("doctor_id") for a in assignments])
+        appt_rows = "".join(
+            _row([_esc(full_name(_docs.get(a.get("doctor_id")) or "") or "—"),
+                  _esc(str(a.get("appointment_date") or "")[:16]),
+                  _esc(a.get("status") or "")])
+            for a in assignments) or _empty("No appointments")
+        # Diseases
+        diseases = _sort(
+            query_index(DISEASES, "patient_id-index", "patient_id", pid),
+            "diagnosis_date")
+        dis_rows = "".join(
+            _row([_esc(d.get("disease_name") or ""),
+                  _esc(d.get("severity") or ""),
+                  _esc(d.get("status") or "")])
+            for d in diseases) or _empty("No disease records")
+        # Lab orders (with test names)
+        labs = _sort(
+            query_index(LAB_ORDERS, "patient_id-index", "patient_id", pid),
+            "order_date")
+        _tests = fetch_by_ids(LAB_TESTS, [o.get("test_id") for o in labs])
+        lab_rows = "".join(
+            _row([_esc((_tests.get(o.get("test_id")) or {}).get("test_name") or ("Test #%s" % o.get("test_id"))),
+                  _esc(o.get("result_value") or "Pending"),
+                  _esc(o.get("status") or "")])
+            for o in labs) or _empty("No lab orders")
+        # Prescriptions (with medicine names)
+        rxs = _sort(
+            query_index(PRESCRIPTIONS, "patient_id-index", "patient_id", pid),
+            "prescribed_date")
+        _meds = fetch_by_ids(MEDICINES, [r.get("medicine_id") for r in rxs])
+        rx_rows = "".join(
+            _row([_esc((_meds.get(r.get("medicine_id")) or {}).get("medicine_name") or ("Medicine #%s" % r.get("medicine_id"))),
+                  _esc(r.get("dosage") or "—"),
+                  _esc(r.get("status") or "")])
+            for r in rxs) or _empty("No prescriptions")
+        # Bills
+        bills = _sort(
+            query_index(BILLS, "patient_id-index", "patient_id", pid), "bill_date")
+        bill_rows = "".join(
+            _row([_esc("#%s" % b.get("bill_id")),
+                  _esc(b.get("net_amount") or 0),
+                  _esc(b.get("status") or "")])
+            for b in bills) or _empty("No billing records")
+
+        try:
+            send_patient_history_email(
+                email,
+                full_name(patient) or "",
+                pid,
+                now(),
+                appt_rows, dis_rows, lab_rows, rx_rows, bill_rows,
+            )
+        except Exception as exc:
+            return _json(502, {"error": f"Could not send the history report email: {exc}"})
+        return _json(200, {"message": "Patient history report sent",
+                            "patient_id": pid, "email": email,
+                            "report_sent_at": now()})
 
     # ---- LIST ----
     if method == "GET" and resource.rstrip("/").endswith("/patients"):

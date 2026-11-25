@@ -142,6 +142,9 @@ const PatientsAPI = {
   create: (body)    => request("/patients",        { method: "POST",   body: JSON.stringify(body) }),
   update: (id, b)   => request(`/patients/${id}`, { method: "PUT",    body: JSON.stringify(b) }),
   remove: (id)      => request(`/patients/${id}`, { method: "DELETE" }),
+  /* Email the patient's complete medical record (patient history) to
+     the patient's email. Sent from the Patient History page. */
+  sendHistoryReport: (id) => request(`/patients/${id}/send-history-report`, { method: "POST" }),
 };
 
 /* ---------------- BILLING ---------------- */

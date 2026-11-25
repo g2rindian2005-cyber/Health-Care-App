@@ -41,6 +41,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
             Download Report
           </button>
+          <button class="btn btn-outline btn-sm" id="sendHistoryBtn" onclick="sendHistoryReport()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            Send to Patient Email
+          </button>
         </div>
       </div>
 
@@ -324,6 +328,26 @@
     } catch (e) { /* print the core record even if lab/pharmacy fail */ }
     btn.disabled = false;
     window.print();
+  }
+
+  /* Send to Patient Email — emails the patient's complete medical
+     record (the history shown on this page: appointments, diseases,
+     lab reports, prescriptions, bills) to the patient's registered
+     email. This is the one place the report is sent from. */
+  async function sendHistoryReport() {
+    if (!currentPatient) { showToast('Please select a patient and load history first.', 'warning'); return; }
+    if (!currentPatient.email) { showToast('This patient has no email address on file — add an email to the patient record first.', 'error'); return; }
+    const btn = document.getElementById('sendHistoryBtn');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    const res = await PatientsAPI.sendHistoryReport(currentPatient.patient_id);
+    btn.disabled = false;
+    btn.innerHTML = original;
+    if (res && res.email) {
+      showToast('Medical record sent to ' + res.email, 'success');
+    }
+    /* On failure request() already showed the error toast. */
   }
 
   populateSelector();
