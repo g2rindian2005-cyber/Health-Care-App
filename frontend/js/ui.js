@@ -685,7 +685,7 @@ const NOTIF_MAX_ITEMS = 6;
    ids, so existing appointments don't all flood in as "New". */
 const NOTIF_SEEN_ASSIGNMENTS_KEY = 'hms_notif_seen_assignments';
 const NOTIF_WAITING_MAX_AGE_MS = 60 * 60 * 1000; /* a waiting patient counts for 60 minutes */
-const NOTIF_POLL_MS = 30000; /* doctor panel only: re-check every 30 seconds */
+const NOTIF_POLL_MS = 10000; /* doctor panel only: re-check every 10 seconds, so a waiting patient pops up fast */
 
 function _notifSeenAssignments() {
   try {
