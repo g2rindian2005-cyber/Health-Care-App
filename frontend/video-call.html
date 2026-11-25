@@ -20,7 +20,17 @@
     .call-status.ended { background: rgba(148,163,184,.15); color: #94a3b8; border-color: rgba(148,163,184,.35); }
     .call-timer { font-size: 16px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; min-width: 64px; text-align: center; }
     .call-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #000; }
-    #jitsiContainer { flex: 1; min-height: 0; }
+    #jitsiContainer { flex: 1; min-height: 0; position: relative; }
+    /* Loading overlay: covers the video area while Jitsi loads, so a
+       failed embed never shows a blank white page with a broken icon.
+       Hidden the moment the conference joins; the error card takes
+       over if the join times out. */
+    .call-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0a1128; text-align: center; padding: 24px; z-index: 5; }
+    .call-loading .spinner { width: 44px; height: 44px; border-radius: 50%; border: 4px solid rgba(96,165,250,.25); border-top-color: #60a5fa; animation: callspin 1s linear infinite; }
+    @keyframes callspin { to { transform: rotate(360deg); } }
+    .call-loading h3 { font-size: 17px; font-weight: 700; color: #fff; margin: 0; }
+    .call-loading p { font-size: 13.5px; color: rgba(219,234,254,.78); line-height: 1.7; margin: 0; max-width: 440px; }
+    .call-loading a { color: #60a5fa; font-weight: 700; }
     .call-hint { padding: 10px 18px; font-size: 12.5px; line-height: 1.6; color: rgba(219,234,254,.78); background: #0d1b3e; border-bottom: 1px solid rgba(255,255,255,.08); }
     .call-controls { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; padding: 14px 16px; background: #0f1e45; border-top: 1px solid rgba(255,255,255,.08); }
     .call-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07); color: #f1f5f9; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
@@ -56,7 +66,14 @@
   <!-- Call stage: Jitsi + controls -->
   <div class="call-stage" id="callStage">
     <div class="call-hint" id="callHint">Camera aur mic ke liye browser me <b>Allow</b> dabayein — bina camera ke bhi audio se baat ho sakti hai.</div>
-    <div id="jitsiContainer"></div>
+    <div id="jitsiContainer">
+      <div class="call-loading" id="jitsiLoading">
+        <div class="spinner"></div>
+        <h3>Connecting to video call…</h3>
+        <p>Doctor ko notify kar diya gaya hai — wo aapke join karne ka wait kar rahe hain.</p>
+        <p>Video load hone me time lag raha hai? <a id="loadingDirectLink" href="#" target="_blank" rel="noopener">Join directly on meet.ffmuc.net</a></p>
+      </div>
+    </div>
     <div class="call-controls">
       <button class="call-btn" id="micBtn" onclick="onToggleAudio()" disabled>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
@@ -123,6 +140,12 @@
 
   function show(el) { document.getElementById(el).style.display = 'flex'; }
   function hide(el) { document.getElementById(el).style.display = 'none'; }
+  /* Hide the "Connecting..." overlay once the video is actually on
+     screen (or when the error card takes over). */
+  function hideLoading() {
+    var l = document.getElementById('jitsiLoading');
+    if (l) l.style.display = 'none';
+  }
   function setStatus(text, cls) {
     var s = document.getElementById('callStatus');
     s.textContent = text;
@@ -161,6 +184,7 @@
 
   function showError(msg) {
     if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
+    hideLoading();
     hide('callStage');
     hide('summaryWrap');
     document.getElementById('errorText').textContent = msg;
@@ -211,11 +235,14 @@
     /* Same room for both sides — computed from the canonical API row. */
     room = roomName(asg.assignment_id, asg.appointment_date || qs.get('appointment_date') || '');
 
-    /* Direct-join fallback in the header: visible from now on, so the
-       patient can bypass the embed any time. */
+    /* Direct-join fallback in the header AND in the loading overlay:
+       visible from now on, so the patient can bypass the embed any
+       time — no waiting for the timeout if the video won't load. */
     var dj = document.getElementById('directJoinBtn');
     dj.href = 'https://meet.ffmuc.net/' + room;
     dj.style.display = '';
+    var ll = document.getElementById('loadingDirectLink');
+    if (ll) ll.href = 'https://meet.ffmuc.net/' + room;
 
     try {
       await loadJitsi();
@@ -232,6 +259,7 @@
       onStatus: function () {
         callJoined = true;
         if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
+        hideLoading();
         document.getElementById('micBtn').disabled = false;
         document.getElementById('camBtn').disabled = false;
         document.getElementById('endBtn').disabled = false;
@@ -280,12 +308,14 @@
       if (role === 'patient') setPatientWaiting(asg.assignment_id, true);
       /* Join timeout: if videoConferenceJoined never fires (embed blocked
          or the conference never joins), don't sit on "Connecting..."
-         forever — show the error card with the direct-join fallback. */
+         forever — show the error card with the direct-join fallback.
+         12 seconds is enough for a healthy embed; a failed one shows
+         only the loading overlay (never a blank broken page) until then. */
       joinTimer = setTimeout(function () {
         if (!callJoined) {
-          showError('Video call connect nahi ho rahi — 25 second me room join nahi hua. Neeche diye gaye direct link se meet.ffmuc.net par seedha join karo, ya Try Again dabakar dobara try karo.');
+          showError('Video call connect nahi ho rahi — 12 second me room join nahi hua. Doctor ko notify kar diya gaya hai. Neeche diye gaye direct link se meet.ffmuc.net par seedha join karo, ya Try Again dabakar dobara try karo.');
         }
-      }, 25000);
+      }, 12000);
     }
   }
 
