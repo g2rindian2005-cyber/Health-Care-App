@@ -18,7 +18,28 @@
     .card-header { border-bottom-color:rgba(255,255,255,.12); }
     .card-header-left h3, .card h3 { color:#fff; }
     .card-header-left p { color:rgba(219,234,254,.78); }
-    .msg-layout { display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+    /* ── Full-width, edge-to-edge two-pane layout (demo option A) ──
+       List + thread form ONE continuous surface (like WhatsApp):
+       fixed 340px list pane on the left with a border-right
+       separator, thread takes all remaining width, no gap between
+       panes. The surface stretches the full content width and fills
+       the available height below the page header. */
+    .page-content { display:flex; flex-direction:column; min-height:calc(100vh - var(--topbar-height)); }
+    .page-header { flex:0 0 auto; }
+    .msg-layout { display:grid; grid-template-columns:340px 1fr; gap:0; align-items:stretch; flex:1 1 auto; min-height:0;
+      background:linear-gradient(155deg, #101d42 0%, #0d1b3e 55%, #0f1e45 100%);
+      border:1px solid rgba(147,197,253,.22); border-radius:14px;
+      box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55);
+      overflow:hidden; }
+    /* The two panes share the surface above — strip their own card frames. */
+    #convListCard, #threadCard { background:transparent; border:none; border-radius:0; box-shadow:none; min-height:0; display:flex; flex-direction:column; }
+    #convListCard { border-right:1px solid rgba(255,255,255,.12); }
+    #convListCard > .card-header, #threadCard > .card-header { flex:0 0 auto; }
+    .msg-search, .filter-chips, .appt-strip, .quick-replies, .thread-footer { flex:0 0 auto; }
+    #convList { flex:1 1 auto; min-height:0; overflow-y:auto; }
+    #convList::-webkit-scrollbar { width:8px; }
+    #convList::-webkit-scrollbar-thumb { background:#22315c; border-radius:999px; }
+    #convList::-webkit-scrollbar-track { background:transparent; }
     @media (max-width: 900px) { .msg-layout { grid-template-columns:1fr; } }
     .conv-row { display:flex; gap:12px; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); cursor:pointer; }
     .conv-row:hover { background:rgba(255,255,255,.04); }
@@ -30,7 +51,7 @@
     .conv-preview { font-size:12.5px; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px; }
     .conv-time { font-size:11px; color:#94a3b8; margin-top:2px; }
     .conv-unread { min-width:20px; height:20px; line-height:20px; text-align:center; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
-    .thread-body { min-height:320px; max-height:480px; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
+    .thread-body { flex:1 1 auto; min-height:0; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
     .thread-body::-webkit-scrollbar { width:8px; }
     .thread-body::-webkit-scrollbar-thumb { background:#22315c; border-radius:999px; }
     .thread-body::-webkit-scrollbar-track { background:transparent; }
@@ -72,8 +93,9 @@
     .attach-btn { width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:#f1f5f9; font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; }
     .attach-btn:hover { background:rgba(255,255,255,.14); }
     @media (max-width: 900px) {
+      #convListCard { border-right:none; }
       #threadCard { display:none; }
-      #messagesWrap.show-thread #threadCard { display:block; }
+      #messagesWrap.show-thread #threadCard { display:flex; }
       #messagesWrap.show-thread #convListCard { display:none; }
       .thread-back { display:inline-flex; }
     }

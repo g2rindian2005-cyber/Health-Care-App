@@ -37,7 +37,7 @@ function buildSidebarHTML() {
       <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
     </svg>
   </div>
-  <span class="sidebar-brand-name">Healthe<span>Care</span></span>
+  <span class="sidebar-brand-name">Health<span>Care</span></span>
   <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
   </button>
@@ -311,7 +311,7 @@ function buildPatientSidebarHTML() {
       <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
     </svg>
   </div>
-  <span class="sidebar-brand-name">Healthe<span>Care</span></span>
+  <span class="sidebar-brand-name">Health<span>Care</span></span>
   <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
   </button>
@@ -431,7 +431,7 @@ function buildDoctorSidebarHTML() {
       <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
     </svg>
   </div>
-  <span class="sidebar-brand-name">Healthe<span>Care</span></span>
+  <span class="sidebar-brand-name">Health<span>Care</span></span>
   <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
   </button>
