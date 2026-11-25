@@ -149,7 +149,7 @@
       empty.textContent = 'Camera preview is not available in this browser.';
       setPill(document.getElementById('camStatus'), false, 'Camera: Not available');
       setPill(document.getElementById('micStatus'), false, 'Mic: Not available');
-      showCamHint('Camera preview is browser me available nahi hai — please Chrome ya Edge use karo.');
+      showCamHint('Camera preview is not available in this browser — please use Chrome or Edge.');
       return;
     }
     try {
@@ -173,11 +173,11 @@
       setPill(document.getElementById('camStatus'), false, 'Camera: Not available');
       setPill(document.getElementById('micStatus'), false, 'Mic: Not available');
       if (name === 'NotAllowedError' || name === 'SecurityError') {
-        showCamHint('Camera ya mic ki permission allow karo — browser ke address bar me camera icon par click karke Allow karo, ya camera use karne wale dusre tabs/apps band karo, phir Retry dabao.');
+        showCamHint('Allow camera and mic permission — click the camera icon in the browser address bar and choose Allow, or close other tabs/apps using the camera, then press Retry.');
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-        showCamHint('Camera ya mic nahi mila — check karo ki camera connected hai, phir Retry dabao.');
+        showCamHint('No camera or mic found — check that a camera is connected, then press Retry.');
       } else {
-        showCamHint('Camera ya mic start nahi hua — permission check karo aur Retry dabao.');
+        showCamHint('Camera or mic did not start — check permissions and press Retry.');
       }
     }
   }

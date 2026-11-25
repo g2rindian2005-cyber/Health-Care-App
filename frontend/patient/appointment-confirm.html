@@ -67,7 +67,7 @@
       <div class="card ticket" id="errorCard" style="display:none;">
         <div class="card-body" style="text-align:center; padding:36px 20px;">
           <h3 style="margin-bottom:8px;">Appointment not found</h3>
-          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">Ye booking nahi mili, ya ye tumhari booking nahi hai.</p>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">This booking was not found, or it is not your booking.</p>
           <a href="my-appointments.html" class="btn btn-primary">My Appointments</a>
         </div>
       </div>
@@ -88,7 +88,7 @@
             <!-- Confirm step (only while Scheduled) -->
             <div id="confirmStep" style="display:none; padding: 6px 24px 20px; text-align:center;">
               <p style="font-size:13px; color:rgba(219,234,254,.78); line-height:1.7; margin-bottom:14px;">
-                Details check karo — sahi hai to confirm karo. Confirm karte hi tumhara QR code ban jayega.
+                Check the details — if they are correct, confirm. Your QR code will be created as soon as you confirm.
               </p>
               <button class="btn btn-primary" id="confirmBtn" onclick="confirmAppointment()">Confirm Appointment</button>
             </div>
@@ -96,7 +96,7 @@
             <!-- Pay later via UPI (only when method is UPI and not paid yet) -->
             <div id="upiPayLater" style="display:none; padding: 6px 24px 20px; text-align:center;">
               <p style="font-size:13px; color:rgba(219,234,254,.78); line-height:1.7; margin-bottom:12px;">
-                Abhi tak payment nahi hui — QR scan karke <b id="upiLaterFee">—</b> pay karo, phir transaction ID daalo.
+                Payment not done yet — scan the QR to pay <b id="upiLaterFee">—</b>, then enter the transaction ID.
               </p>
               <img data-upi-qr alt="UPI QR code" style="width:160px; height:160px; object-fit:contain; border-radius:10px; background:#fff; margin-bottom:12px;">
               <div class="form-group" style="text-align:left;">
@@ -122,14 +122,14 @@
               <div class="qr-wrap">
                 <div class="qr-box" id="qrBox"></div>
                 <div id="qrFallback" style="display:none;"><div class="qr-fallback" id="qrFallbackText"></div></div>
-                <p class="qr-note">Hospital reception pe ye QR dikhao — check-in ke liye.<br>Booking ID aur Token Number bhi saath me dikha dena.</p>
+                <p class="qr-note">Show this QR at the hospital reception for check-in.<br>Also show the Booking ID and Token Number.</p>
               </div>
               <div class="qr-actions">
                 <a class="btn btn-primary btn-sm" id="joinCallBtn" href="#" title="Join the video consultation with your doctor">Join Video Call</a>
                 <button type="button" class="btn btn-outline btn-sm" id="downloadQrBtn" onclick="downloadQR()" style="display:none;">Download QR</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">Print</button>
               </div>
-              <p class="qr-note">Video consultation: doctor bhi isi appointment ke video room me join karenge — Join Video Call dabate hi call shuru hogi.</p>
+              <p class="qr-note">Video consultation: the doctor will join the same video room for this appointment — the call starts as soon as you press Join Video Call.</p>
             </div>
 
             <!-- Locked placeholder (while not yet Confirmed) -->
@@ -220,7 +220,7 @@
       ['Room', asg.room_number || '—'],
       ['Consultation Fee', pay.fee],
       ['Payment Method', pay.method],
-      ['Payment Status', pay.txn ? `Paid via UPI (Txn: ${pay.txn})` : 'Pending — clinic pe hogi'],
+      ['Payment Status', pay.txn ? `Paid via UPI (Txn: ${pay.txn})` : 'Pending — pay at the clinic'],
       ['Status', asg.status],
     ];
     if (pay.reason) rows.push(['Reason', pay.reason]);
@@ -276,7 +276,7 @@
     } else {
       hide('confirmStep');
       hide('qrStep');
-      document.getElementById('qrLockedText').textContent = `Is appointment ka QR code available nahi hai (Status: ${asg.status}).`;
+      document.getElementById('qrLockedText').textContent = `The QR code for this appointment is not available (Status: ${asg.status}).`;
       show('qrLocked');
       hide('downloadQrBtn');
     }
@@ -359,7 +359,7 @@
     const img = box.querySelector('img');
     const canvas = box.querySelector('canvas');
     const url = img ? img.src : (canvas ? canvas.toDataURL('image/png') : null);
-    if (!url) { showToast('QR code abhi ready nahi hai.', 'warning'); return; }
+    if (!url) { showToast('QR code is not ready yet.', 'warning'); return; }
     const a = document.createElement('a');
     a.href = url;
     a.download = `HealtheCare-Appointment-HCA-${asgId}.png`;

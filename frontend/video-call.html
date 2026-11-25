@@ -60,18 +60,18 @@
     <span class="call-status" id="callStatus">Connecting…</span>
     <div class="call-timer" id="callTimer">00:00</div>
     <button class="btn btn-outline btn-sm" id="copyLinkBtn" onclick="copyCallLink()" title="Copy the Jitsi room link to share with the other side">Copy Call Link</button>
-    <a class="btn btn-outline btn-sm" id="directJoinBtn" href="#" target="_blank" rel="noopener" style="display:none;" title="Jitsi room ko seedha meet.ffmuc.net par kholo — embed kaam na kare to yahi use karo">Join directly</a>
+    <a class="btn btn-outline btn-sm" id="directJoinBtn" href="#" target="_blank" rel="noopener" style="display:none;" title="Open the Jitsi room directly on meet.ffmuc.net — use this if the embed does not work">Join directly</a>
   </header>
 
   <!-- Call stage: Jitsi + controls -->
   <div class="call-stage" id="callStage">
-    <div class="call-hint" id="callHint">Camera aur mic ke liye browser me <b>Allow</b> dabayein — bina camera ke bhi audio se baat ho sakti hai.</div>
+    <div class="call-hint" id="callHint">Allow camera and mic in your browser — you can still talk over audio without a camera.</div>
     <div id="jitsiContainer">
       <div class="call-loading" id="jitsiLoading">
         <div class="spinner"></div>
         <h3>Connecting to video call…</h3>
-        <p>Doctor ko notify kar diya gaya hai — wo aapke join karne ka wait kar rahe hain.</p>
-        <p>Video load hone me time lag raha hai? <a id="loadingDirectLink" href="#" target="_blank" rel="noopener">Join directly on meet.ffmuc.net</a></p>
+        <p>The doctor has been notified — they are waiting for you to join.</p>
+        <p>Video taking long to load? <a id="loadingDirectLink" href="#" target="_blank" rel="noopener">Join directly on meet.ffmuc.net</a></p>
       </div>
     </div>
     <div class="call-controls">
@@ -104,8 +104,8 @@
   <!-- Error (bad link / not your booking / Jitsi down) -->
   <div class="call-center" id="errorWrap" style="display:none;">
     <div class="call-card">
-      <h2>Video call start nahi hui</h2>
-      <p id="errorText">Kuch galat hua — dobara try karo.</p>
+      <h2>Video call did not start</h2>
+      <p id="errorText">Something went wrong — try again.</p>
       <div class="call-actions">
         <a class="btn btn-primary" id="errorDirectLink" href="#" target="_blank" rel="noopener" style="display:none;">Join directly on meet.ffmuc.net</a>
         <button class="btn btn-outline" onclick="window.location.reload()">Try Again</button>
@@ -199,17 +199,17 @@
   }
 
   async function init() {
-    if (!assignmentId) { showError('Link me appointment id nahi hai — My Appointments se dobara join karo.'); return; }
+    if (!assignmentId) { showError('The link has no appointment ID — join again from My Appointments.'); return; }
 
     var res = await DoctorsAPI.assignment(assignmentId);
     asg = res && res.assignment;
-    if (!asg) { showError('Appointment load nahi hui — connection check karo aur refresh karo.'); return; }
+    if (!asg) { showError('Appointment did not load — check your connection and refresh.'); return; }
 
     /* Patient side: only the assignment's own patient may join. */
     if (role === 'patient') {
       var myPid = await resolveMyPid();
       if (!myPid || myPid !== asg.patient_id) {
-        showError('Ye tumhari booking nahi hai — tum sirf apni appointment ki video call join kar sakte ho.');
+        showError('This is not your booking — you can only join the video call for your own appointment.');
         return;
       }
     }
@@ -247,7 +247,7 @@
     try {
       await loadJitsi();
     } catch (e) {
-      showError('Jitsi load nahi hua — internet connection check karo aur refresh karo.');
+      showError('Jitsi did not load — check your internet connection and refresh.');
       return;
     }
 
@@ -266,8 +266,8 @@
         setStatus('Waiting for ' + otherLabel + ' to join…');
         document.getElementById('callHint').textContent =
           role === 'patient'
-            ? 'Tum video room me ho — doctor ke join karte hi consultation shuru hogi. Doctor apne appointments page se isi room me join karenge.'
-            : 'Tum video room me ho — patient ke join karte hi consultation shuru hogi. Patient apni appointment se isi room me join karega.';
+            ? 'You are in the video room — the consultation starts as soon as the doctor joins. The doctor joins this same room from their appointments page.'
+            : 'You are in the video room — the consultation starts as soon as the patient joins. The patient joins this same room from their appointment.';
         /* Waiting flag: a patient joining marks "patient is waiting"
            for the doctor's bell; a doctor joining clears it (the
            patient is no longer waiting — the call is on). */
@@ -276,12 +276,12 @@
       },
       onPeerJoined: function () {
         setStatus('Consultation in progress', 'live');
-        document.getElementById('callHint').textContent = 'Consultation chal rahi hai — neeche Audio/Video band kar sakte ho, End Call se khatam karo.';
+        document.getElementById('callHint').textContent = 'Consultation in progress — you can turn Audio/Video off below, or end the call with End Call.';
       },
       onPeerLeft: function () {
         if (VideoCall.getDurationSeconds() > 0) {
           setStatus('The other side left the call');
-          document.getElementById('callHint').textContent = 'Dusri side ne call chhod di — tum End Call dabakar khatam kar sakte ho, ya wait kar sakte ho.';
+          document.getElementById('callHint').textContent = 'The other side left the call — press End Call to finish, or wait for them to rejoin.';
         }
       },
       onTick: function (seconds) {
@@ -297,7 +297,7 @@
       onError: function (msg) { showError(msg); }
     });
     if (!joined) {
-      showError('Video call start nahi hui — refresh karke dobara try karo.');
+      showError('Video call did not start — refresh and try again.');
     } else {
       /* Patient is waiting from the moment they open this page — set
          the flag NOW, not only when Jitsi confirms the join. If the
@@ -313,7 +313,7 @@
          only the loading overlay (never a blank broken page) until then. */
       joinTimer = setTimeout(function () {
         if (!callJoined) {
-          showError('Video call connect nahi ho rahi — 12 second me room join nahi hua. Doctor ko notify kar diya gaya hai. Neeche diye gaye direct link se meet.ffmuc.net par seedha join karo, ya Try Again dabakar dobara try karo.');
+          showError('Video call is not connecting — the room did not join within 12 seconds. The doctor has been notified. Join directly on meet.ffmuc.net using the link below, or press Try Again.');
         }
       }, 12000);
     }
@@ -324,9 +324,9 @@
   function onEndCall() { VideoCall.endCall(); }
 
   function copyCallLink() {
-    if (!room) { showToast('Call link abhi ready nahi hai.', 'warning'); return; }
+    if (!room) { showToast('Call link is not ready yet.', 'warning'); return; }
     var url = 'https://meet.ffmuc.net/' + room;
-    function done() { showToast('Call link copied — dusri side ko bhej do.', 'success'); }
+    function done() { showToast('Call link copied — send it to the other side.', 'success'); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url); done(); });
     } else { fallbackCopy(url); done(); }
@@ -354,10 +354,10 @@
       /* A real consultation happened — record it (best-effort). */
       historySaved = await recordConsultation(asg.assignment_id, doctorName, result.durationMinutes);
       document.getElementById('summaryTitle').textContent = 'Consultation Ended';
-      document.getElementById('summarySub').textContent = 'Thanks — tumhari video consultation khatam hui.';
+      document.getElementById('summarySub').textContent = 'Thanks — your video consultation has ended.';
     } else {
       document.getElementById('summaryTitle').textContent = 'Call Ended — No Consultation';
-      document.getElementById('summarySub').textContent = 'Dusri side join nahi hui, isliye consultation record nahi bani. Appointment time par dobara try karo.';
+      document.getElementById('summarySub').textContent = 'The other side did not join, so no consultation record was created. Try again at the appointment time.';
     }
 
     document.getElementById('summaryRows').innerHTML = [
@@ -372,7 +372,7 @@
 
     document.getElementById('historyNote').textContent =
       result.peerJoined
-        ? (historySaved ? 'Consultation History me save ho gaya.' : 'History save nahi ho payi — connection check karo; call ka record dobara save karne ke liye support se bolo.')
+        ? (historySaved ? 'Saved in Consultation History.' : 'Could not save history — check your connection; ask support to save the call record again.')
         : '';
 
     document.getElementById('summaryLinks').innerHTML = role === 'patient'
