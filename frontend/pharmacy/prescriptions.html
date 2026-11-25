@@ -165,6 +165,11 @@
               <button class="btn-icon btn-icon-danger" onclick="deleteRx(${r.prescription_id})" title="Delete">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
               </button>
+              ${r.status === 'Dispensed'
+                ? (r.report_sent_at
+                    ? '<span class="badge badge-success">Sent</span>'
+                    : '<button class="btn btn-outline btn-sm" onclick="sendPrescription(' + r.prescription_id + ', this)">Send via Email</button>')
+                : ''}
             </div>
           </td>
         </tr>`).join('')
@@ -210,6 +215,24 @@
     if (!ok) return;
     const res = await PharmacyAPI.removePrescription(id);
     if (res !== null) { showToast('Prescription deleted.', 'success'); await init(); }
+  }
+
+  /* Admin sends a dispensed prescription to the patient by email.
+     Only Dispensed prescriptions can be sent (the medicine must be
+     ready). The patient only views the prescription in My Reports —
+     they cannot send it themselves. */
+  async function sendPrescription(prescriptionId, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    const res = await PharmacyAPI.sendPrescription(prescriptionId);
+    if (res && res.report_sent_at) {
+      const item = allRx.find(function (r) { return r.prescription_id === prescriptionId; });
+      if (item) { item.report_sent_at = res.report_sent_at; item.report_sent_to = res.email; }
+      showToast('Prescription sent to ' + (res.email || 'the patient'), 'success');
+    }
+    /* On failure request() already showed the error toast; re-render
+       restores the button either way. */
+    renderTable();
   }
 
   init();

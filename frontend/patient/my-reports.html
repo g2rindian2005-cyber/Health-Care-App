@@ -67,10 +67,10 @@
             <table>
               <thead>
                 <tr>
-                  <th>Test</th><th>Date</th><th>Doctor</th><th>Status</th><th>Result</th><th>Sent</th><th></th>
+                  <th>Test</th><th>Date</th><th>Doctor</th><th>Status</th><th>Result</th><th>Sent</th>
                 </tr>
               </thead>
-              <tbody id="labTable"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+              <tbody id="labTable"><tr><td colspan="6"><div class="spinner"></div></td></tr></tbody>
             </table>
           </div>
         </div>
@@ -84,10 +84,10 @@
             <table>
               <thead>
                 <tr>
-                  <th>Medicine</th><th>Dosage</th><th>Date</th><th>Doctor</th><th>Status</th><th>Sent</th><th></th>
+                  <th>Medicine</th><th>Dosage</th><th>Date</th><th>Doctor</th><th>Status</th><th>Sent</th>
                 </tr>
               </thead>
-              <tbody id="rxTable"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+              <tbody id="rxTable"><tr><td colspan="6"><div class="spinner"></div></td></tr></tbody>
             </table>
           </div>
         </div>
@@ -135,11 +135,14 @@
     return null;
   }
 
+  /* The patient only views the report here. The hospital (admin)
+     emails it to the patient once it is ready — the patient cannot
+     send it themselves. */
   function sentCell(item) {
     if (item.report_sent_at) {
       return '<span class="badge badge-success">Sent</span> <span class="text-muted">' + esc(String(item.report_sent_at).slice(0, 16)) + '</span>';
     }
-    return '<span class="text-muted">Not sent</span>';
+    return '<span class="text-muted">Not sent yet</span>';
   }
 
   function renderTables() {
@@ -158,10 +161,9 @@
             '<td>' + statusBadge(o.status || 'Ordered') + '</td>' +
             '<td>' + esc(o.result_value || 'Pending') + '</td>' +
             '<td>' + sentCell(o) + '</td>' +
-            '<td><button class="btn btn-outline btn-sm" data-send-lab="' + o.order_id + '">Send via Email</button></td>' +
             '</tr>';
         }).join('')
-      : '<tr><td colspan="7"><div class="empty-state"><h4>No lab reports yet</h4><p>Lab tests ordered for you will appear here. Ask your doctor to order a test, or check back after your next visit.</p></div></td></tr>';
+      : '<tr><td colspan="6"><div class="empty-state"><h4>No lab reports yet</h4><p>Lab tests ordered for you will appear here. Ask your doctor to order a test, or check back after your next visit.</p></div></td></tr>';
 
     document.getElementById('rxTable').innerHTML = prescriptions.length
       ? prescriptions.map(function (r) {
@@ -172,49 +174,10 @@
             '<td>' + esc(r.doctor_name || '—') + '</td>' +
             '<td>' + statusBadge(r.status || 'Pending') + '</td>' +
             '<td>' + sentCell(r) + '</td>' +
-            '<td><button class="btn btn-outline btn-sm" data-send-rx="' + r.prescription_id + '">Send via Email</button></td>' +
             '</tr>';
         }).join('')
-      : '<tr><td colspan="7"><div class="empty-state"><h4>No prescriptions yet</h4><p>Medicines prescribed for you will appear here. Ask your doctor for a prescription, or check back after your next visit.</p></div></td></tr>';
+      : '<tr><td colspan="6"><div class="empty-state"><h4>No prescriptions yet</h4><p>Medicines prescribed for you will appear here. Ask your doctor for a prescription, or check back after your next visit.</p></div></td></tr>';
   }
-
-  async function sendLabReport(orderId, btn) {
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-    const res = await LabAPI.sendReport(orderId);
-    if (res && res.report_sent_at) {
-      const item = labOrders.find(function (o) { return o.order_id === orderId; });
-      if (item) { item.report_sent_at = res.report_sent_at; item.report_sent_to = res.email; }
-      showToast('Lab report sent to ' + (res.email || myEmail), 'success');
-    }
-    /* On failure request() already showed the error toast; re-render
-       restores the button either way. */
-    renderTables();
-  }
-
-  async function sendPrescription(prescriptionId, btn) {
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-    const res = await PharmacyAPI.sendPrescription(prescriptionId);
-    if (res && res.report_sent_at) {
-      const item = prescriptions.find(function (r) { return r.prescription_id === prescriptionId; });
-      if (item) { item.report_sent_at = res.report_sent_at; item.report_sent_to = res.email; }
-      showToast('Prescription sent to ' + (res.email || myEmail), 'success');
-    }
-    renderTables();
-  }
-
-  document.addEventListener('click', function (e) {
-    const labBtn = e.target.closest('[data-send-lab]');
-    if (labBtn && !labBtn.disabled) {
-      sendLabReport(parseInt(labBtn.getAttribute('data-send-lab'), 10), labBtn);
-      return;
-    }
-    const rxBtn = e.target.closest('[data-send-rx]');
-    if (rxBtn && !rxBtn.disabled) {
-      sendPrescription(parseInt(rxBtn.getAttribute('data-send-rx'), 10), rxBtn);
-    }
-  });
 
   async function init() {
     myPid = await resolveMyPatient();
