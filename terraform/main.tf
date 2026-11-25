@@ -115,6 +115,17 @@ locals {
       pk_type = "S"
       gsis    = {}
     }
+    # Patient-doctor chat: one row per message. The messages Lambda
+    # lists a conversation via patient_id-index and a doctor's inbox
+    # via doctor_id-index.
+    messages = {
+      name = "hospital-messages"
+      pk   = "message_id"
+      gsis = {
+        "patient_id-index" = "patient_id"
+        "doctor_id-index"  = "doctor_id"
+      }
+    }
   }
   common_env = {
     PATIENTS_TABLE      = "hospital-patients"
@@ -127,6 +138,7 @@ locals {
     LAB_ORDERS_TABLE    = "hospital-lab-orders"
     MEDICINES_TABLE     = "hospital-medicines"
     PRESCRIPTIONS_TABLE = "hospital-prescriptions"
+    MESSAGES_TABLE      = "hospital-messages"
     COUNTERS_TABLE      = "hospital-id-counters"
     USERS_TABLE         = "hospital-users"
     # Cognito (set from the resources below — the doctor Lambda
@@ -338,6 +350,7 @@ locals {
     { name = "doctor", source = "../backend/doctor-lambda" },
     { name = "lab", source = "../backend/lab-lambda" },
     { name = "pharmacy", source = "../backend/pharmacy-lambda" },
+    { name = "messages", source = "../backend/messages-lambda" },
   ]
   # NOTE: the auth Lambda is gone — sign-in is AWS Cognito now (see
   # the Cognito section below). Its old routes /auth/* are removed
@@ -629,6 +642,7 @@ locals {
     assignments = 3 # -> doctor-lambda
     lab         = 4 # -> lab-lambda
     pharmacy    = 5 # -> pharmacy-lambda
+    messages    = 6 # -> messages-lambda
     # NOTE: no auth route any more — /auth/login, /auth/verify-otp
     # and /auth/register are retired; Cognito handles sign-in.
   }

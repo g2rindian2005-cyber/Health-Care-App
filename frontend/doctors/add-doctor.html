@@ -101,6 +101,11 @@
                     </select>
                   </div>
                   <div class="form-group">
+                    <label class="form-label">Available Hours</label>
+                    <input type="text" class="form-control" id="availHours" placeholder="e.g. Mon-Sat 10:00-13:00, 17:00-20:00">
+                    <span style="font-size:11.5px; color:var(--gray-400);">Time slots, comma separated. A slot without days uses the days from the previous slot.</span>
+                  </div>
+                  <div class="form-group">
                     <label class="form-label">License Number</label>
                     <input type="text" class="form-control" id="license" placeholder="Medical license number">
                   </div>
@@ -169,6 +174,28 @@
 
   document.getElementById('joiningDate').value = new Date().toISOString().split('T')[0];
 
+  /* Parse "Mon-Sat 10:00-13:00, 17:00-20:00" into
+     [{days:"Mon-Sat",start:"10:00",end:"13:00"}, ...]. A slot with no
+     days reuses the days of the previous slot. Malformed parts are
+     skipped silently — the form never breaks on a typo. */
+  function parseAvailableHours(raw) {
+    const out = [];
+    if (!raw) return out;
+    let days = 'Mon-Sat';
+    raw.split(',').forEach(function (part) {
+      part = part.trim();
+      if (!part) return;
+      const m = part.match(/^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:\s*-\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun))?\s+)?(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/i);
+      if (!m) return;
+      if (m[1]) days = m[2] ? (m[1] + '-' + m[2]) : m[1];
+      const start = String(m[3]).padStart(2, '0') + ':' + m[4];
+      const end = String(m[5]).padStart(2, '0') + ':' + m[6];
+      if (start >= end) return;
+      out.push({ days: days, start: start, end: end });
+    });
+    return out;
+  }
+
   async function submitDoctor() {
     const required = ['firstName','lastName','specialization','phone'];
     let valid = true;
@@ -193,6 +220,7 @@
       experience_years: parseInt(document.getElementById('experience').value)||0,
       consultation_fee: parseFloat(document.getElementById('consultFee').value)||0,
       availability:     document.getElementById('availability').value,
+      available_hours:  parseAvailableHours(document.getElementById('availHours').value),
       license_number:   document.getElementById('license').value.trim(),
       joining_date:     document.getElementById('joiningDate').value,
       phone:            document.getElementById('phone').value.trim(),

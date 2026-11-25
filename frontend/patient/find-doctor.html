@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find a Doctor — HealtheCare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=8">
+  <style>
+    /* ── Light background + dark premium cards (approved demo look) ── */
+    .card { background:linear-gradient(155deg, #0d2f6b 0%, #0a2450 55%, #0e2f6e 100%); border:1px solid rgba(147,197,253,.22); color:#e6eef7; box-shadow:0 1px 2px rgba(10,25,66,.25), 0 18px 38px -14px rgba(11,47,107,.55); }
+    .card-header { border-bottom-color:rgba(255,255,255,.12); }
+    .card-header-left h3, .card h3 { color:#fff; }
+    .card-header-left p { color:rgba(219,234,254,.78); }
+    .card thead th { color:rgba(219,234,254,.70); background:rgba(255,255,255,.06); border-bottom-color:rgba(255,255,255,.12); }
+    .card tbody td { color:#e6eef7; border-bottom-color:rgba(255,255,255,.08); }
+    .card tbody tr:hover { background:rgba(255,255,255,.04); }
+  </style>
+</head>
+<body class="dash-blue">
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <div class="page-content fade-in">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Find a Doctor</h1>
+          <p>See when each doctor is available, then call or chat during their hours</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="book-appointment.html" class="btn btn-primary btn-sm">Book Appointment</a>
+        </div>
+      </div>
+
+      <!-- No profile yet -->
+      <div class="card" id="noProfileCard" style="display:none;">
+        <div class="card-body" style="text-align:center; padding:36px 20px;">
+          <h3 style="margin-bottom:8px;">Complete your profile first</h3>
+          <p style="font-size:13.5px; color:rgba(219,234,254,.78); margin-bottom:18px;">We could not find a patient record for your account yet. Add your details once, then you can see doctor availability and chat with your doctors.</p>
+          <a href="my-profile.html" class="btn btn-primary">Complete My Profile</a>
+        </div>
+      </div>
+
+      <div id="findDoctorWrap" style="display:none;">
+        <!-- How it works -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-body" style="padding:16px 22px;">
+            <p style="margin:0; font-size:13.5px; color:rgba(219,234,254,.85);">Video Call works only during a doctor's available hours — and only when you have a confirmed appointment with them. Chat works any time; the doctor replies when they are online.</p>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+          <div class="stat-card stat-teal"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div class="stat-info"><div class="stat-value" id="statAvailable">—</div><div class="stat-label">Available Now</div></div></div>
+          <div class="stat-card stat-blue"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-info"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Doctors</div></div></div>
+          <div class="stat-card stat-purple"><div class="stat-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div><div class="stat-info"><div class="stat-value" id="statConfirmed">—</div><div class="stat-label">Confirmed Appointments</div></div></div>
+        </div>
+
+        <!-- Doctors & Availability table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left"><h3>Doctors &amp; Availability</h3><p>Live from the hospital directory — times shown for today</p></div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Doctor</th><th>Specialization</th><th>Fee</th><th>Available Time</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="doctorTable"><tr><td colspan="6"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Chat drawer -->
+<div class="chat-backdrop" id="chatBackdrop" hidden onclick="closeChat()"></div>
+<div class="chat-drawer" id="chatDrawer" hidden role="dialog" aria-label="Chat with doctor">
+  <div class="chat-drawer-header">
+    <div class="chat-drawer-avatar" id="chatDoctorAvatar">?</div>
+    <div class="chat-drawer-title">
+      <div class="chat-drawer-name" id="chatDoctorName">Doctor</div>
+      <div class="chat-drawer-status" id="chatDoctorStatus"></div>
+    </div>
+    <button type="button" class="chat-drawer-close" onclick="closeChat()" aria-label="Close chat">✕</button>
+  </div>
+  <div class="chat-drawer-body" id="chatBody">
+    <div class="chat-empty">Loading messages…</div>
+  </div>
+  <div class="chat-drawer-footer">
+    <input type="text" id="chatInput" placeholder="Type a message…" autocomplete="off"
+           onkeydown="if (event.key === 'Enter') sendChatMessage()">
+    <button type="button" class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+  </div>
+</div>
+
+<script src="../js/ui.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script>
+  initApp({ page: 'find-doctor', title: 'Find a Doctor', subtitle: 'My Care' });
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function initials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  function daysToSet(days) {
+    /* "Mon-Sat" -> {1,2,3,4,5,6}; "Mon" -> {1}; "Mon-Sun" -> all 7. */
+    const set = new Set();
+    if (!days) return set;
+    String(days).split(',').forEach(function (part) {
+      part = part.trim();
+      if (!part) return;
+      const range = part.split('-').map(function (s) { return s.trim(); });
+      const idx = function (n) { return DAY_NAMES.indexOf(n); };
+      if (range.length === 2) {
+        const a = idx(range[0]), b = idx(range[1]);
+        if (a < 0 || b < 0) return;
+        let d = a;
+        for (let i = 0; i < 7; i++) { set.add(d); if (d === b) break; d = (d + 1) % 7; }
+      } else {
+        const v = idx(range[0]);
+        if (v >= 0) set.add(v);
+      }
+    });
+    return set;
+  }
+
+  function toMin(t) {
+    const p = String(t || '').split(':');
+    return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+  }
+
+  function fmtTime(t) {
+    const m = toMin(t);
+    let h = Math.floor(m / 60);
+    const mm = m % 60, ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return h + ':' + String(mm).padStart(2, '0') + ' ' + ap;
+  }
+
+  function fmtHours(hours) {
+    if (!hours || !hours.length) return '—';
+    return hours.map(function (s) {
+      return String(s.days || '').replace('-', '–') + ' ' + fmtTime(s.start) + ' – ' + fmtTime(s.end);
+    }).join(', ');
+  }
+
+  /* Where is this doctor, right now?
+     - 'now': the Available flag is on and the current time is inside a slot.
+     - 'later': outside the slots — note carries the next available time.
+     - 'off': the doctor's flag is Busy / On Leave.
+     - 'unset': no hours on the record at all. */
+  function availabilityOf(doc, now) {
+    if ((doc.availability || 'Available') !== 'Available') {
+      return { state: 'off', note: doc.availability || 'Busy' };
+    }
+    const hours = Array.isArray(doc.available_hours) ? doc.available_hours : [];
+    if (!hours.length) return { state: 'unset', note: 'Hours not set' };
+    const day = now.getDay();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    for (const s of hours) {
+      if (daysToSet(s.days).has(day) && mins >= toMin(s.start) && mins < toMin(s.end)) {
+        return { state: 'now', note: 'Available Now' };
+      }
+    }
+    const todayLater = hours
+      .filter(function (s) { return daysToSet(s.days).has(day) && toMin(s.start) > mins; })
+      .sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
+    if (todayLater.length) {
+      return { state: 'later', note: 'Next available at ' + fmtTime(todayLater[0].start) };
+    }
+    for (let d = 1; d <= 7; d++) {
+      const nd = (day + d) % 7;
+      const next = hours
+        .filter(function (s) { return daysToSet(s.days).has(nd); })
+        .sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
+      if (next.length) {
+        const when = d === 1 ? 'Tomorrow' : DAY_NAMES[nd];
+        return { state: 'later', note: 'Next available ' + when + ' at ' + fmtTime(next[0].start) };
+      }
+    }
+    return { state: 'unset', note: 'Hours not set' };
+  }
+
+  let myPid = null;
+  let myPatientName = '';
+  let doctors = [];
+  let confirmedByDoctor = {};   /* doctor_id -> Confirmed assignment */
+  let confirmedCount = 0;
+  let unreadCounts = {};        /* doctor_id -> unread doctor messages */
+
+  function doctorName(doc) {
+    return ((doc.first_name || '') + ' ' + (doc.last_name || '')).trim() || 'Doctor';
+  }
+
+  async function resolveMyPatient() {
+    const cached = sessionStorage.getItem('hms_pid');
+    if (cached) {
+      const pid = parseInt(cached, 10);
+      try {
+        const p = await PatientsAPI.get(pid);
+        if (p && p.patient) {
+          myPatientName = ((p.patient.first_name || '') + ' ' + (p.patient.last_name || '')).trim();
+        }
+      } catch (e) { /* name is only used for the video-call link */ }
+      return pid;
+    }
+    const email = getMyEmail();
+    if (!email) return null;
+    const res = await PatientsAPI.byEmail(email);
+    if (res && res.patient) {
+      myPatientName = ((res.patient.first_name || '') + ' ' + (res.patient.last_name || '')).trim();
+      sessionStorage.setItem('hms_pid', String(res.patient.patient_id));
+      return res.patient.patient_id;
+    }
+    return null;
+  }
+
+  function statusCell(doc, avail) {
+    let badge;
+    if (avail.state === 'now') badge = '<span class="badge badge-success">Available Now</span>';
+    else if (avail.state === 'off') badge = (doc.availability === 'On Leave')
+      ? '<span class="badge badge-gray">On Leave</span>'
+      : '<span class="badge badge-warning">Busy</span>';
+    else badge = '<span class="badge badge-gray">Not Available</span>';
+    const note = (avail.state === 'later')
+      ? '<div class="text-muted" style="font-size:12px; margin-top:4px;">' + esc(avail.note) + '</div>'
+      : '';
+    return badge + note;
+  }
+
+  function actionsCell(doc, avail) {
+    const confirmed = confirmedByDoctor[doc.doctor_id];
+    let callBtn;
+    if (avail.state === 'now' && confirmed) {
+      const link = '../video-call.html?assignment_id=' + confirmed.assignment_id +
+        '&role=patient&doctor_name=' + encodeURIComponent(doctorName(doc)) +
+        '&appointment_date=' + encodeURIComponent(confirmed.appointment_date || '') +
+        '&patient_name=' + encodeURIComponent(myPatientName);
+      callBtn = '<a class="btn btn-primary btn-sm" href="' + link + '">Video Call</a>';
+    } else if (avail.state === 'now') {
+      callBtn = '<a class="btn btn-primary btn-sm" href="book-appointment.html" title="Book an appointment first, then call during the doctor\'s hours">Book to Call</a>';
+    } else {
+      callBtn = '<button class="btn btn-primary btn-sm" disabled title="' + esc(avail.note) + '">Video Call</button>';
+    }
+    const unread = unreadCounts[doc.doctor_id] || 0;
+    const chatBtn = '<button class="btn btn-outline btn-sm" onclick="openChat(' + doc.doctor_id + ')">Chat' +
+      (unread ? '<span class="chat-unread-dot">' + unread + '</span>' : '') + '</button>';
+    const bookBtn = '<a class="btn btn-outline btn-sm" href="book-appointment.html">Book</a>';
+    return '<div style="display:flex; gap:6px; flex-wrap:wrap;">' + callBtn + chatBtn + bookBtn + '</div>';
+  }
+
+  function renderTable() {
+    const now = new Date();
+    const availableNow = doctors.filter(function (d) {
+      return availabilityOf(d, now).state === 'now';
+    }).length;
+    document.getElementById('statAvailable').textContent = availableNow;
+    document.getElementById('statTotal').textContent = doctors.length;
+    document.getElementById('statConfirmed').textContent = confirmedCount;
+
+    document.getElementById('doctorTable').innerHTML = doctors.length
+      ? doctors.map(function (doc) {
+          const avail = availabilityOf(doc, now);
+          return '<tr>' +
+            '<td><div style="display:flex; align-items:center; gap:10px;">' +
+              '<span class="doctor-avatar">' + esc(initials(doctorName(doc))) + '</span>' +
+              '<div><div class="fw-600">' + esc(doctorName(doc)) + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' + esc(doc.department || '') + '</div></div>' +
+            '</div></td>' +
+            '<td>' + esc(doc.specialization || '—') + '</td>' +
+            '<td>' + esc(formatCurrency(doc.consultation_fee)) + '</td>' +
+            '<td style="white-space:normal;">' + esc(fmtHours(doc.available_hours)) + '</td>' +
+            '<td>' + statusCell(doc, avail) + '</td>' +
+            '<td>' + actionsCell(doc, avail) + '</td>' +
+            '</tr>';
+        }).join('')
+      : '<tr><td colspan="6"><div class="empty-state"><h4>No doctors found</h4><p>No doctors are registered yet. Please check back later.</p></div></td></tr>';
+  }
+
+  /* ── Chat drawer ─────────────────────────────────────────── */
+  let chatDid = null;
+  let chatTimer = null;
+
+  function openChat(did) {
+    const doc = doctors.find(function (d) { return d.doctor_id === did; });
+    if (!doc) return;
+    chatDid = did;
+    document.getElementById('chatDoctorAvatar').textContent = initials(doctorName(doc));
+    document.getElementById('chatDoctorName').textContent = doctorName(doc);
+    const avail = availabilityOf(doc, new Date());
+    document.getElementById('chatDoctorStatus').textContent =
+      avail.state === 'now' ? 'Available Now · replies soon' : (doc.specialization || '');
+    document.getElementById('chatBackdrop').hidden = false;
+    document.getElementById('chatDrawer').hidden = false;
+    document.getElementById('chatInput').value = '';
+    document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Loading messages…</div>';
+    loadConversation();
+    MessagesAPI.markRead(myPid, did).then(function () {
+      unreadCounts[did] = 0;
+      renderTable();
+    });
+    if (chatTimer) clearInterval(chatTimer);
+    chatTimer = setInterval(function () { loadConversation(true); }, 10000);
+    document.getElementById('chatInput').focus();
+  }
+
+  function closeChat() {
+    if (chatTimer) { clearInterval(chatTimer); chatTimer = null; }
+    chatDid = null;
+    document.getElementById('chatBackdrop').hidden = true;
+    document.getElementById('chatDrawer').hidden = true;
+  }
+
+  async function loadConversation(quiet) {
+    if (!chatDid || !myPid) return;
+    const res = await MessagesAPI.conversation(myPid, chatDid, !!quiet);
+    const msgs = (res && res.messages) || [];
+    const body = document.getElementById('chatBody');
+    if (!msgs.length) {
+      body.innerHTML = '<div class="chat-empty">No messages yet.<br>Write your question below — the doctor will reply here.</div>';
+      return;
+    }
+    body.innerHTML = msgs.map(function (m) {
+      const own = m.sender === 'patient';
+      return '<div class="chat-msg ' + (own ? 'own' : 'other') + '">' + esc(m.text) +
+        '<span class="chat-msg-time">' + esc(String(m.created_at || '').slice(0, 16)) + '</span></div>';
+    }).join('');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || !chatDid || !myPid) return;
+    input.value = '';
+    const res = await MessagesAPI.send({ patient_id: myPid, doctor_id: chatDid, sender: 'patient', text: text });
+    if (res) loadConversation();
+  }
+
+  async function init() {
+    myPid = await resolveMyPatient();
+    if (!myPid) {
+      document.getElementById('noProfileCard').style.display = 'block';
+      return;
+    }
+    document.getElementById('findDoctorWrap').style.display = 'block';
+
+    const docData = await DoctorsAPI.list();
+    doctors = (docData && docData.doctors) || [];
+
+    const asgData = await DoctorsAPI.forPatient(myPid);
+    const assignments = (asgData && asgData.assignments) || [];
+    confirmedCount = assignments.filter(function (a) { return a.status === 'Confirmed'; }).length;
+    confirmedByDoctor = {};
+    assignments
+      .filter(function (a) { return a.status === 'Confirmed'; })
+      .sort(function (a, b) { return new Date(a.appointment_date) - new Date(b.appointment_date); })
+      .forEach(function (a) {
+        if (!confirmedByDoctor[a.doctor_id]) confirmedByDoctor[a.doctor_id] = a;
+      });
+
+    const msgData = await MessagesAPI.forPatient(myPid, true);
+    const allMsgs = (msgData && msgData.messages) || [];
+    unreadCounts = {};
+    allMsgs.forEach(function (m) {
+      if (m.sender === 'doctor' && !m.read_by_patient) {
+        unreadCounts[m.doctor_id] = (unreadCounts[m.doctor_id] || 0) + 1;
+      }
+    });
+
+    renderTable();
+    /* Statuses are time-based — refresh every minute so "Available
+       Now" flips without a reload. */
+    setInterval(renderTable, 60000);
+  }
+
+  init();
+</script>
+</body>
+</html>

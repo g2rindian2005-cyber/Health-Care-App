@@ -234,6 +234,22 @@ const PharmacyAPI = {
   lowStock:       ()        => request("/pharmacy/low-stock"),
 };
 
+/* ---------------- MESSAGES (patient <-> doctor chat) ----------------
+   The optional quiet flag keeps background polls silent: a failed
+   poll must never pop an error toast every 10 seconds. */
+const MessagesAPI = {
+  /* Send a message. sender is "patient" or "doctor". */
+  send:        (body)    => request("/messages",      { method: "POST", body: JSON.stringify(body) }),
+  /* One conversation between a patient and a doctor. */
+  conversation: (pid, did, quiet) => request(`/messages?patient_id=${pid}&doctor_id=${did}`, quiet ? { quiet: true } : {}),
+  /* A doctor's inbox (all messages for that doctor). */
+  forDoctor:   (did, quiet) => request(`/messages?doctor_id=${did}`, quiet ? { quiet: true } : {}),
+  /* A patient's threads (all messages for that patient). */
+  forPatient:  (pid, quiet) => request(`/messages?patient_id=${pid}`, quiet ? { quiet: true } : {}),
+  /* Mark the other side's messages in a thread as read. */
+  markRead:    (pid, did)=> request("/messages/read", { method: "POST", body: JSON.stringify({ patient_id: pid, doctor_id: did }) }),
+};
+
 /* ---------------- AUTH (AWS Cognito User Pool) ----------------
    The old /auth/login, /auth/verify-otp and /auth/register routes
    are retired (the auth Lambda is removed). Sign-up, email

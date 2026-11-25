@@ -338,6 +338,15 @@ function buildPatientSidebarHTML() {
       </span>
       Book Appointment
     </a>
+    <a href="${p}patient/find-doctor.html" class="nav-item" data-page="find-doctor">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+      </span>
+      Find a Doctor
+    </a>
     <a href="${p}patient/my-profile.html" class="nav-item" data-page="my-profile">
       <span class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -439,6 +448,15 @@ function buildDoctorSidebarHTML() {
         </svg>
       </span>
       My Patients
+    </a>
+    <a href="${p}doctor/messages.html" class="nav-item" data-page="messages">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </span>
+      Messages
     </a>
     <a href="${p}doctor/consultation-history.html" class="nav-item" data-page="consultation-history">
       <span class="nav-icon">

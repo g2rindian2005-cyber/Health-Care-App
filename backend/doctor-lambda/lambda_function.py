@@ -213,7 +213,8 @@ def _dispatch(event, context):
     if method == "GET" and resource.rstrip("/").endswith("/doctors"):
         rows = _sort(scan_all(DOCTORS), "doctor_id")
         cols = ["doctor_id", "first_name", "last_name", "specialization",
-                "department", "phone", "email", "availability", "consultation_fee"]
+                "department", "phone", "email", "availability", "consultation_fee",
+                "available_hours"]
         rows = [{k: r[k] for k in cols if k in r} for r in rows]
         return _json(200, {"count": len(rows), "doctors": rows})
 
@@ -231,7 +232,8 @@ def _dispatch(event, context):
         if not match:
             return _json(200, {"doctor": None})
         cols = ["doctor_id", "first_name", "last_name", "specialization",
-                "department", "phone", "email", "availability", "consultation_fee"]
+                "department", "phone", "email", "availability", "consultation_fee",
+                "available_hours"]
         return _json(200, {"doctor": {k: match[k] for k in cols if k in match}})
 
     if method == "GET" and resource.endswith("/doctors/{doctor_id}"):
@@ -282,6 +284,11 @@ def _dispatch(event, context):
         d = _body(event)
         if not d.get("first_name") or not d.get("last_name") or not d.get("specialization"):
             return _json(400, {"error": "first_name, last_name and specialization are required"})
+        hours = d.get("available_hours")
+        # DynamoDB rejects empty lists — store nothing when no slots
+        # were given (put_item drops None-valued attributes).
+        if not isinstance(hours, list) or not hours:
+            hours = None
         new_id = next_id(DOCTORS)
         put_item(DOCTORS, {
             "doctor_id": new_id,
@@ -293,6 +300,7 @@ def _dispatch(event, context):
             "email": d.get("email"),
             "license_number": d.get("license_number"),
             "availability": d.get("availability", "Available"),
+            "available_hours": hours,
             "consultation_fee": float(d.get("consultation_fee", 0)),
             "created_at": now(),
             "updated_at": now(),
@@ -308,12 +316,18 @@ def _dispatch(event, context):
         did = int(_pp(event, "doctor_id"))
         d = _body(event)
         fields = ["first_name", "last_name", "specialization", "department", "phone",
-                  "email", "license_number", "availability", "consultation_fee"]
+                  "email", "license_number", "availability", "available_hours",
+                  "consultation_fee"]
         changes = {f: d[f] for f in fields if f in d}
         if not changes:
             return _json(400, {"error": "No fields to update"})
         if "consultation_fee" in changes:
             changes["consultation_fee"] = float(changes["consultation_fee"])
+        if "available_hours" in changes:
+            # An empty list is not a valid DynamoDB value — clearing
+            # the hours removes the attribute instead.
+            if not isinstance(changes["available_hours"], list) or not changes["available_hours"]:
+                changes["available_hours"] = None
         update_item(DOCTORS, did, changes)
         return _json(200, {"message": "Doctor updated", "doctor_id": did})
 

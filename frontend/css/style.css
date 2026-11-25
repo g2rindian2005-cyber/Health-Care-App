@@ -1289,6 +1289,33 @@ textarea.form-control { resize: vertical; min-height: 90px; line-height: 1.5; }
 .incoming-call-time span { color: #fbbf24; font-weight: 700; font-variant-numeric: tabular-nums; }
 .incoming-call-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
 
+/* ── Chat drawer (patient <-> doctor messages) ───────────────
+   Fixed right-side panel, same dark navy look as the rest of the
+   patient panel. The patient's own messages sit on the right. */
+.chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 380px; max-width: 94vw; z-index: 900; display: flex; flex-direction: column; background: #101d42; border-left: 1px solid rgba(147,197,253,.22); box-shadow: -18px 0 48px rgba(0,0,0,.45); }
+.chat-drawer[hidden] { display: none; }
+.chat-drawer-header { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.chat-drawer-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); flex-shrink: 0; }
+.chat-drawer-title { flex: 1; min-width: 0; }
+.chat-drawer-name { font-weight: 700; color: #f1f5f9; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-drawer-status { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.chat-drawer-close { background: transparent; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; width: 32px; height: 32px; font-size: 15px; cursor: pointer; color: #f1f5f9; flex-shrink: 0; }
+.chat-drawer-close:hover { background: rgba(255,255,255,.08); }
+.chat-drawer-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 32px 12px; line-height: 1.6; }
+.chat-msg { max-width: 78%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; word-break: break-word; }
+.chat-msg.other { align-self: flex-start; background: rgba(255,255,255,.10); color: #e6eef7; border-bottom-left-radius: 4px; }
+.chat-msg.own { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 4px; }
+.chat-msg-time { display: block; font-size: 10.5px; opacity: .65; margin-top: 4px; }
+.chat-drawer-footer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid rgba(255,255,255,.12); }
+.chat-drawer-footer input { flex: 1; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 10px 14px; color: #f1f5f9; font-size: 13.5px; outline: none; min-width: 0; }
+.chat-drawer-footer input:focus { border-color: #60a5fa; }
+.chat-unread-dot { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; text-align: center; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+.chat-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,.5); z-index: 899; }
+.chat-backdrop[hidden] { display: none; }
+/* Small round avatar used in the Find a Doctor table. */
+.doctor-avatar { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); flex-shrink: 0; }
+
 /* Topbar notification bell + dropdown (injected by ui.js _initNotifBell).
    Anchored under the bell via .topbar-notif-wrap; inherits the
    Midnight Navy dark theme from the --gray/--white tokens. */
