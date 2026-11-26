@@ -1,20 +1,23 @@
 """
 Email helper for the patient Lambda: sends the patient's complete
-medical record (patient history) to the patient's email via the
-Amazon SES API (boto3) — NOT SMTP.
+medical record (patient history) and the registration welcome email
+via Gmail SMTP — NOT Amazon SES.
 
-Why the SES API and not SMTP: SES SMTP needs a username + password
-in the Lambda env vars. Those were never set, so SES refused every
-send with "530 Authentication required". The SES API needs NO
-password at all — the Lambda's IAM role already allows
-ses:SendEmail / ses:SendRawEmail (terraform/main.tf, lambda_extras),
-so the Lambda authenticates with its own role. Nothing to put in
-tfvars, nothing to create in the SES console.
+Why Gmail SMTP and not SES: the SES account is stuck in sandbox mode
+and SES keeps refusing sends with AccessDenied even when sender and
+recipient both show Verified (three times now, across two accounts:
+533267206558 and 074055094667). Production access is the permanent
+SES fix, but it needs AWS access the user does not have right now.
+Gmail SMTP needs no SES at all: the Lambda logs in to smtp.gmail.com
+with a Gmail App Password and sends from the hospital Gmail address.
 
-One requirement stays: the sender address (SMTP_FROM_EMAIL env var,
-gokul9356782322@gmail.com) must be a verified SES identity, and
-while the SES account is in sandbox mode the recipient must be
-verified too. SES returns a clear error if either is not verified.
+Env vars (Lambda env, from Terraform common_env or the Lambda
+console): SMTP_HOST (smtp.gmail.com), SMTP_PORT (587),
+SMTP_USERNAME (the Gmail address), SMTP_PASSWORD (the 16-digit Gmail
+App Password — NOT the Gmail login password), SMTP_FROM_EMAIL (the
+Gmail address). smtp_config.py reads all of these and logs in only
+when a username + password are set. Without them the send raises,
+and the handler returns a 502.
 
 The patient history report is generated from the Patient History page
 (all the patient's data in one place) and emailed from there — there
@@ -23,36 +26,9 @@ rows for each section, so the Lambda only fills in the lists.
 """
 import os
 
-import boto3
+from smtp_config import send_email
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
-SES_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "noreply@hospital.com")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
-
-_ses = None
-
-
-def _ses_client():
-    global _ses
-    if _ses is None:
-        _ses = boto3.client("ses", region_name=AWS_REGION)
-    return _ses
-
-
-def send_email(to_email, subject, html_body):
-    """Send one HTML email via the SES API. Raises on failure
-    (e.g. sender/recipient not verified in SES) so the caller can
-    return a 502."""
-    resp = _ses_client().send_email(
-        Source=SES_FROM_EMAIL,
-        Destination={"ToAddresses": [to_email]},
-        Message={
-            "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Html": {"Data": html_body, "Charset": "UTF-8"}},
-        },
-    )
-    return {"status": "sent", "to": to_email,
-            "message_id": resp.get("MessageId")}
 
 
 def _load_template(name):
