@@ -187,12 +187,16 @@ Write down `cloudfront_url` (the site) and `api_gateway_url` (the API).
 cd ..
 aws s3 sync frontend/ s3://hospital-management-frontend-bucket/
 ```
-## doctor run this command in bash 
+## doctor set run this command in bash 
 ```bash
 anil.gupta@hospital.com
 aws cognito-idp admin-create-user --user-pool-id us-east-1_mCsP5CiMk --username anil.gupta@hospital.com --user-attributes Name=email,Value=anil.gupta@hospital.com Name=email_verified,Value=true --message-action SUPPRESS --region us-east-1
 
 aws cognito-idp admin-set-user-password --user-pool-id us-east-1_mCsP5CiMk --username anil.gupta@hospital.com --password 123456789 --permanent --region us-east-1
+```
+### admin password set commands
+```bash
+aws cognito-idp admin-add-user-to-group --user-pool-id us-east-1_KTw2YGMBS --username gokul9356782322@gmail.com --group-name Admins --region us-east-1
 ```
 The bucket name is always `hospital-management-frontend-bucket`.
 **Do NOT use `--delete` here** — Terraform already
