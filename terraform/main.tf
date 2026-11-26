@@ -343,14 +343,17 @@ resource "aws_iam_role_policy" "lambda_extras" {
 # Lambda packages (archive_file builds the zip from source)
 # ============================================================
 locals {
+  # NOTE: the 7 per-module API Lambdas (patient, billing, disease,
+  # doctor, lab, pharmacy, messages) are CONSOLIDATED into one
+  # "api" Lambda (backend/api-lambda/) that routes by first path
+  # segment. The Pluralsight Hands-on Playground suspends the account
+  # when ~10 Lambda functions are created at once, so the project
+  # deploys with only 3 Lambdas total (api + db_init +
+  # cognito_migration). No route, status code, or response shape
+  # changed — the modules live on as subpackages of api-lambda and
+  # the API Gateway routes below are untouched.
   lambda_services = [
-    { name = "patient", source = "../backend/patient-lambda" },
-    { name = "billing", source = "../backend/billing-lambda" },
-    { name = "disease", source = "../backend/disease-lambda" },
-    { name = "doctor", source = "../backend/doctor-lambda" },
-    { name = "lab", source = "../backend/lab-lambda" },
-    { name = "pharmacy", source = "../backend/pharmacy-lambda" },
-    { name = "messages", source = "../backend/messages-lambda" },
+    { name = "api", source = "../backend/api-lambda" },
   ]
   # NOTE: the auth Lambda is gone — sign-in is AWS Cognito now (see
   # the Cognito section below). Its old routes /auth/* are removed
@@ -373,7 +376,7 @@ resource "archive_file" "lambda_zip" {
 # and zips them as build/deps-layer.zip.
 resource "null_resource" "build_deps_layer" {
   triggers = {
-    requirements = filebase64sha256("${path.module}/../backend/patient-lambda/requirements.txt")
+    requirements = filebase64sha256("${path.module}/../backend/api-lambda/requirements.txt")
     builder      = filebase64sha256("${path.module}/build_layer.py")
   }
 
@@ -385,9 +388,9 @@ resource "null_resource" "build_deps_layer" {
 # Shared dependencies layer (cryptography from requirements.txt;
 # boto3 is already in the Lambda Python runtime).
 # archive_file above only zips source code, so without this layer the
-# doctor function fails with "No module named 'cryptography'" — it
+# api function fails with "No module named 'cryptography'" — it
 # uses it to verify Cognito JWT signatures (RS256, see
-# backend/doctor-lambda/cognito_auth.py).
+# backend/api-lambda/cognito_auth.py).
 resource "aws_lambda_layer_version" "deps" {
   filename            = "${path.module}/build/deps-layer.zip"
   layer_name          = "${var.project_name}-deps"
@@ -633,16 +636,16 @@ resource "aws_lambda_permission" "cognito_migration" {
 # ============================================================
 locals {
   route_map = {
-    patients    = 0 # -> patient-lambda
-    bills       = 1 # -> billing-lambda
-    payments    = 1 # -> billing-lambda
-    dues        = 1 # -> billing-lambda
-    diseases    = 2 # -> disease-lambda
-    doctors     = 3 # -> doctor-lambda
-    assignments = 3 # -> doctor-lambda
-    lab         = 4 # -> lab-lambda
-    pharmacy    = 5 # -> pharmacy-lambda
-    messages    = 6 # -> messages-lambda
+    patients    = 0 # -> api-lambda (patient)
+    bills       = 0 # -> api-lambda (billing)
+    payments    = 0 # -> api-lambda (billing)
+    dues        = 0 # -> api-lambda (billing)
+    diseases    = 0 # -> api-lambda (disease)
+    doctors     = 0 # -> api-lambda (doctor)
+    assignments = 0 # -> api-lambda (doctor)
+    lab         = 0 # -> api-lambda (lab)
+    pharmacy    = 0 # -> api-lambda (pharmacy)
+    messages    = 0 # -> api-lambda (messages)
     # NOTE: no auth route any more — /auth/login, /auth/verify-otp
     # and /auth/register are retired; Cognito handles sign-in.
   }

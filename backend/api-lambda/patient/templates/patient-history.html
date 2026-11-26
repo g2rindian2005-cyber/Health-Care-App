@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Medical Record</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:Segoe UI,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#7e57c2,#5e35b1);padding:30px 40px;">
+            <h1 style="color:#fff;margin:0;font-size:24px;">Your Medical Record</h1>
+            <p style="color:#d1c4e9;margin:8px 0 0;font-size:14px;">Health Care Hospital</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:35px 40px;">
+            <h2 style="color:#5e35b1;margin-top:0;">Hello {{patient_name}},</h2>
+            <p style="color:#455a64;font-size:14px;line-height:1.6;">Here is your complete medical record from Health Care Hospital. Please keep it safe and show it to your doctor at your next visit.</p>
+            <table style="width:100%;margin:20px 0;border-collapse:collapse;">
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:12px 0;color:#78909c;">Patient</td>
+                <td style="padding:12px 0;text-align:right;font-weight:bold;color:#5e35b1;">{{patient_name}}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:12px 0;color:#78909c;">Patient ID</td>
+                <td style="padding:12px 0;text-align:right;font-weight:bold;">PID-{{patient_id}}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:12px 0;color:#78909c;">Generated On</td>
+                <td style="padding:12px 0;text-align:right;font-weight:bold;">{{generated_on}}</td>
+              </tr>
+            </table>
+
+            <h3 style="color:#5e35b1;margin:28px 0 10px;font-size:16px;">Appointments</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr style="background:#f5f5f5;">
+                <th style="padding:8px;text-align:left;color:#78909c;">Doctor</th>
+                <th style="padding:8px;text-align:left;color:#78909c;">Date</th>
+                <th style="padding:8px;text-align:right;color:#78909c;">Status</th>
+              </tr>
+              {{appointments_rows}}
+            </table>
+
+            <h3 style="color:#5e35b1;margin:28px 0 10px;font-size:16px;">Diseases</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr style="background:#f5f5f5;">
+                <th style="padding:8px;text-align:left;color:#78909c;">Disease</th>
+                <th style="padding:8px;text-align:left;color:#78909c;">Severity</th>
+                <th style="padding:8px;text-align:right;color:#78909c;">Status</th>
+              </tr>
+              {{diseases_rows}}
+            </table>
+
+            <h3 style="color:#5e35b1;margin:28px 0 10px;font-size:16px;">Lab Reports</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr style="background:#f5f5f5;">
+                <th style="padding:8px;text-align:left;color:#78909c;">Test</th>
+                <th style="padding:8px;text-align:left;color:#78909c;">Result</th>
+                <th style="padding:8px;text-align:right;color:#78909c;">Status</th>
+              </tr>
+              {{lab_rows}}
+            </table>
+
+            <h3 style="color:#5e35b1;margin:28px 0 10px;font-size:16px;">Prescriptions</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr style="background:#f5f5f5;">
+                <th style="padding:8px;text-align:left;color:#78909c;">Medicine</th>
+                <th style="padding:8px;text-align:left;color:#78909c;">Dosage</th>
+                <th style="padding:8px;text-align:right;color:#78909c;">Status</th>
+              </tr>
+              {{rx_rows}}
+            </table>
+
+            <h3 style="color:#5e35b1;margin:28px 0 10px;font-size:16px;">Bills</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr style="background:#f5f5f5;">
+                <th style="padding:8px;text-align:left;color:#78909c;">Bill</th>
+                <th style="padding:8px;text-align:left;color:#78909c;">Amount</th>
+                <th style="padding:8px;text-align:right;color:#78909c;">Status</th>
+              </tr>
+              {{bills_rows}}
+            </table>
+
+            <div style="background:#ede7f6;border-left:4px solid #7e57c2;padding:15px 20px;border-radius:6px;margin:28px 0 0;">
+              <p style="margin:0;color:#5e35b1;font-size:14px;">This record was emailed to you by Health Care Hospital. If you did not expect it, please contact the hospital reception.</p>
+            </div>
+            <p style="color:#78909c;font-size:13px;">Thank you for choosing Health Care Hospital.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f5f5f5;padding:20px 40px;text-align:center;">
+            <p style="color:#90a4ae;font-size:12px;margin:0;">© 2026 Health Care Hospital</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
