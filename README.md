@@ -210,6 +210,11 @@ aws cognito-idp admin-create-user --user-pool-id us-east-1_mCsP5CiMk --username 
 
 aws cognito-idp admin-set-user-password --user-pool-id us-east-1_mCsP5CiMk --username anil.gupta@hospital.com --password 123456789 --permanent --region us-east-1
 ```
+
+## password set of admin 
+```bash
+ aws cognito-idp admin-set-user-password --user-pool-id us-east-1_KTw2YGMBS --username gokul9356782322@gmail.com --password YOUR_NEW_PASSWORD --permanent --region us-east-1
+ ```
 The bucket name is always `hospital-management-frontend-bucket`.
 **Do NOT use `--delete` here** — Terraform already
 wrote `js/config.js` into the bucket (with the live API URL), and
