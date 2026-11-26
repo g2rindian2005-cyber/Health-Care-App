@@ -283,6 +283,13 @@ resource "aws_dynamodb_table" "hospital" {
   tags = merge(local.tags, { Table = each.value.name })
 }
 
+# The AWS account ID, used to make the S3 bucket name unique per
+# account (S3 bucket names are globally unique). Without this, a
+# fresh deploy into a second account fails with 409
+# BucketAlreadyExists because the plain base name is already owned
+# by another account.
+data "aws_caller_identity" "current" {}
+
 # ============================================================
 # IAM — Lambda execution role
 # ============================================================
@@ -853,11 +860,17 @@ resource "aws_api_gateway_stage" "prod" {
 # S3 — static website hosting for the frontend
 # ============================================================
 resource "aws_s3_bucket" "frontend" {
-  # Bucket name is FIXED on purpose — it must never change with
-  # project_name, so an apply can only ever create this ONE bucket.
-  # (project_name is still validated to "hospital" in variables.tf,
-  # so the whole deployment stays a single deployment.)
-  bucket = "hospital-management-frontend-bucket"
+  # Bucket name is FIXED per account on purpose — it must never
+  # change with project_name, so an apply can only ever create this
+  # ONE bucket. (project_name is still validated to "hospital" in
+  # variables.tf, so the whole deployment stays a single deployment.)
+  # The "-${account ID}" suffix makes the name unique per AWS
+  # account: S3 bucket names are globally unique, and the plain base
+  # name is already owned by another live account, so a fresh deploy
+  # into a new account would fail with 409 BucketAlreadyExists
+  # without it. For this account the name evaluates to
+  # hospital-management-frontend-bucket-058264529949 — unchanged.
+  bucket = "hospital-management-frontend-bucket-${data.aws_caller_identity.current.account_id}"
   tags   = local.tags
 }
 
