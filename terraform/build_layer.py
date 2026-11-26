@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REQUIREMENTS = HERE.parent / "backend" / "patient-lambda" / "requirements.txt"
+REQUIREMENTS = HERE.parent / "backend" / "api-lambda" / "requirements.txt"
 BUILD = HERE / "build"
 TARGET = BUILD / "layer" / "python"
 ARCHIVE = BUILD / "deps-layer"  # .zip is appended by make_archive
