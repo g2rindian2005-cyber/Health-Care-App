@@ -25,13 +25,29 @@ separate **doctor panel** — all deployed with **Terraform**.
 ## Tech stack
 
 - **Frontend**: HTML5, CSS3, Vanilla JS (dark mode, Cognito login)
-- **Backend**: Python 3.11 AWS Lambda (7 microservices)
+- **Backend**: Python 3.11 AWS Lambda — 1 consolidated api Lambda (router to 7 modules) + db-init + cognito-migration = 3 total
 - **API**: Amazon API Gateway (REST)
-- **Database**: Amazon DynamoDB — 12 tables, PAY_PER_REQUEST
+- **Database**: Amazon DynamoDB — 13 tables, PAY_PER_REQUEST
 - **Hosting**: Amazon S3 + CloudFront (HTTPS)
-- **Email**: Amazon SES via SMTP (appointment confirmations, lab reports
-  and prescriptions sent to the patient)
+- **Email**: Gmail SMTP (smtp.gmail.com) — appointment confirmations, lab reports and prescriptions sent to the patient
 - **Infra**: Terraform
+
+## Architecture
+
+Live deployment (account 058264529949, us-east-1) — site https://d2j49h3bddju6x.cloudfront.net
+
+```mermaid
+flowchart TD
+    User([User<br/>Patient / Doctor / Admin]) --> CF[CloudFront<br/>d2j49h3bddju6x.cloudfront.net]
+    CF --> S3[S3 — Frontend<br/>hospital-management-frontend-bucket-058264529949]
+    S3 --> API[API Gateway<br/>7rfrqb8b32.execute-api.us-east-1.amazonaws.com/prod]
+    API --> L[Lambda — hospital-api-service<br/>1 consolidated api Lambda, router to 7 modules]
+    L --> DB[(DynamoDB — 13 tables<br/>patients, doctors, assignments, diseases,<br/>bills, payments, lab, pharmacy, messages)]
+    User --> COG[Cognito<br/>us-east-1_4UOV3Ssic<br/>Admins / Patients / Doctors]
+    COG --> API
+    L --> GMAIL[Gmail SMTP<br/>smtp.gmail.com<br/>report + registration emails]
+    L --> JITSI[Jitsi — meet.ffmuc.net<br/>real video consultation]
+```
 
 ## Project structure
 
@@ -187,29 +203,13 @@ Write down `cloudfront_url` (the site) and `api_gateway_url` (the API).
 cd ..
 aws s3 sync frontend/ s3://hospital-management-frontend-bucket/
 ```
-## doctor set run this command in bash 
+## doctor run this command in bash 
 ```bash
 anil.gupta@hospital.com
 aws cognito-idp admin-create-user --user-pool-id us-east-1_mCsP5CiMk --username anil.gupta@hospital.com --user-attributes Name=email,Value=anil.gupta@hospital.com Name=email_verified,Value=true --message-action SUPPRESS --region us-east-1
 
 aws cognito-idp admin-set-user-password --user-pool-id us-east-1_mCsP5CiMk --username anil.gupta@hospital.com --password 123456789 --permanent --region us-east-1
 ```
-## crete user admin 
-```bash 
-aws cognito-idp admin-create-user --user-pool-id POOL_ID --username gokul9356782322@gmail.com --user-attributes Name=email,Value=gokul9356782322@gmail.com Name=email_verified,Value=true --message-action SUPPRESS --region us-east-1
-```
-
-
-### admin password set commands
-```bash
-aws cognito-idp admin-add-user-to-group --user-pool-id us-east-1_KTw2YGMBS --username gokul9356782322@gmail.com --group-name Admins --region us-east-1
-```
-### user add into admin group 
-```bash
-aws cognito-idp admin-add-user-to-group --user-pool-id POOL_ID --username gokul9356782322@gmail.com --group-name Admins --region us-east-1
-```
-
-
 The bucket name is always `hospital-management-frontend-bucket`.
 **Do NOT use `--delete` here** — Terraform already
 wrote `js/config.js` into the bucket (with the live API URL), and
