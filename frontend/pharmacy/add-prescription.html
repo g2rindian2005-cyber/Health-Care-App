@@ -194,6 +194,7 @@
 
     if (res) {
       showToast('Prescription saved successfully!', 'success');
+      setTimeout(() => { window.location.href = 'prescriptions.html'; }, 1500);
       document.getElementById('rxForm').reset();
       document.getElementById('quantity').value = 10;
     }

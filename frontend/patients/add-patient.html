@@ -265,6 +265,7 @@
     if (res) {
       const pid = res.patient_id || res.id || '—';
       showToast(`Patient registered! ID: PID-${String(pid).padStart(4,'0')}`, 'success', 'Registration Successful');
+      setTimeout(() => { window.location.href = 'view-patient.html'; }, 1500);
       document.getElementById('pidPreview').textContent = `PID-${String(pid).padStart(4,'0')}`;
       document.getElementById('addPatientForm').reset();
       updateChecklist();

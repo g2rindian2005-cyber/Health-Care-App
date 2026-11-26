@@ -216,6 +216,7 @@
 
     if (res) {
       showToast('Diagnosis saved successfully!', 'success');
+      setTimeout(() => { window.location.href = 'disease-history.html'; }, 1500);
       document.getElementById('addDiseaseForm').reset();
       document.getElementById('diagnosisDate').value = new Date().toISOString().split('T')[0];
     }

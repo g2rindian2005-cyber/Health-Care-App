@@ -233,6 +233,7 @@
     if (res) {
       const id = res.doctor_id || res.id || '—';
       showToast(`Doctor registered! ID: DOC-${String(id).padStart(4,'0')}`, 'success', 'Registration Successful');
+      setTimeout(() => { window.location.href = 'appointments.html'; }, 1500);
       document.getElementById('addDoctorForm').reset();
       document.getElementById('joiningDate').value = new Date().toISOString().split('T')[0];
     }
